@@ -4,8 +4,10 @@ from sqlalchemy import text
 from app.db.session import get_db
 from app.db.models import Tenant, MenuItem, Order, Category
 from app.schemas.menu import CategoryWithItems
+from app.core.socket import manager
 from pydantic import BaseModel
 from typing import List
+from datetime import datetime
 
 router = APIRouter()
 
@@ -61,26 +63,19 @@ def get_store_config(request: Request, db: Session = Depends(get_db)):
 @router.get("/menu", response_model=List[CategoryWithItems])
 def get_store_menu(request: Request, db: Session = Depends(get_db)):
     tenant = get_tenant_by_host(request, db)
-    # Context Switch: Read from Tenant Schema
     db.execute(text(f"SET search_path TO {tenant.schema_name}, public"))
 
-    # Return Categories with their items eagerly loaded
-    # Filter items to only show available ones
     categories = (
         db.query(Category)
         .options(joinedload(Category.items))
         .order_by(Category.rank.asc())
         .all()
     )
-
-    # Filter logic could be done in SQL, but for MVP simple list comprehension is fine
-    # to filter out categories with no active items if desired,
-    # but here we just return the structure.
     return categories
 
 
 @router.post("/orders", response_model=OrderResponse, status_code=201)
-def create_store_order(
+async def create_store_order(  # <--- Made Async
     payload: OrderCreateRequest, request: Request, db: Session = Depends(get_db)
 ):
     tenant = get_tenant_by_host(request, db)
@@ -102,7 +97,22 @@ def create_store_order(
         db.rollback()
         raise HTTPException(status_code=500, detail="Failed to place order")
 
-    # TODO: Phase 3 - Trigger WebSocket Broadcast here
+    # Broadcast to KDS (Kitchen Display System)
+    # We broadcast the full order details so the KDS can render it immediately
+    await manager.broadcast_to_tenant(
+        tenant.schema_name,
+        {
+            "event": "new_order",
+            "order": {
+                "id": str(new_order.id),
+                "customer_name": new_order.customer_name,
+                "total_amount": new_order.total_amount,
+                "items": new_order.items,
+                "status": new_order.status,
+                "created_at": str(datetime.now()),
+            },
+        },
+    )
 
     return OrderResponse(
         id=str(new_order.id),

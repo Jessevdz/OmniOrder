@@ -9,6 +9,7 @@ import { MenuBuilder } from './pages/admin/MenuBuilder';
 import { FontLoader } from './components/FontLoader';
 import { CartDrawer } from './components/CartDrawer';
 import { ShoppingBag } from 'lucide-react';
+import { KitchenDisplay } from './pages/kitchen/KitchenDisplay';
 
 // --- Components ---
 
@@ -105,8 +106,11 @@ function App() {
 
                         {/* Admin Routes */}
                         <Route path="/admin/login" element={<LoginPage />} />
-                        {/* ... Protected Admin Routes (Dashboard, MenuBuilder) from previous step ... */}
                         <Route path="/admin/menu" element={<MenuBuilder />} />
+
+                        {/* Phase 3.2: KDS Route */}
+                        <Route path="/kitchen" element={<KitchenDisplay />} />
+
                     </Routes>
                 </BrowserRouter>
             </CartProvider>
