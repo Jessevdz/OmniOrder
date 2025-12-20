@@ -58,42 +58,59 @@ export function KitchenDisplay() {
     useEffect(() => {
         if (!config) return;
 
-        // Determine Protocol (ws vs wss)
         const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         const wsUrl = `${protocol}://${window.location.host}/api/v1/ws/kitchen`;
+        let isMounted = true;
+        let reconnectTimeout: ReturnType<typeof setTimeout>;
 
         const connect = () => {
+            // If we are unmounted, stop trying to connect
+            if (!isMounted) return;
+
             ws.current = new WebSocket(wsUrl);
 
             ws.current.onopen = () => {
-                setIsConnected(true);
-                console.log("KDS Connected");
+                if (isMounted) {
+                    setIsConnected(true);
+                    console.log("KDS Connected");
+                }
             };
 
             ws.current.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-
-                if (data.event === 'new_order') {
-                    handleNewOrder(data.order);
+                if (isMounted) {
+                    const data = JSON.parse(event.data);
+                    if (data.event === 'new_order') {
+                        handleNewOrder(data.order);
+                    }
                 }
             };
 
             ws.current.onclose = () => {
-                setIsConnected(false);
-                // Simple reconnect logic
-                setTimeout(connect, 3000);
+                if (isMounted) {
+                    setIsConnected(false);
+                    // Only reconnect if the component is still mounted
+                    reconnectTimeout = setTimeout(connect, 3000);
+                }
             };
         };
 
         connect();
 
-        return () => ws.current?.close();
+        return () => {
+            isMounted = false;
+            clearTimeout(reconnectTimeout); // Cancel pending reconnects
+            ws.current?.close();
+        };
     }, [config]);
 
     // --- 3. Logic ---
     const handleNewOrder = (order: Order) => {
-        setOrders(prev => [...prev, order]);
-        // Play Sound
+        setOrders(prev => {
+            if (prev.some(o => o.id === order.id)) return prev;
+            return [...prev, order];
+        });
+
+        // Play Sound (Debounced slightly if needed, but safe here)
         audioRef.current?.play().catch(e => console.error("Audio play failed", e));
     };
 
