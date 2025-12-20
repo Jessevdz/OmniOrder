@@ -5,6 +5,7 @@ class TenantCreateRequest(BaseModel):
     name: str
     domain: str
     primary_color: str = "#000000"
+    font_family: str = "Inter
 
 
 class TenantResponse(BaseModel):

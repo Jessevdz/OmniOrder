@@ -1,21 +1,32 @@
 import { useEffect, useState } from "react";
+import { useCart } from "../context/CartContext";
+import { Plus } from "lucide-react";
 
 interface MenuItem {
     id: string;
     name: string;
+    description?: string;
     price: number;
+    image_url?: string;
     is_available: boolean;
 }
 
+interface Category {
+    id: string;
+    name: string;
+    items: MenuItem[];
+}
+
 export function MenuGrid() {
-    const [items, setItems] = useState<MenuItem[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
+    const { addToCart } = useCart();
 
     useEffect(() => {
         fetch('/api/v1/store/menu')
             .then(res => res.json())
             .then(data => {
-                setItems(data);
+                setCategories(data);
                 setLoading(false);
             })
             .catch(err => {
@@ -24,52 +35,61 @@ export function MenuGrid() {
             });
     }, []);
 
-    const handleQuickOrder = async (item: MenuItem) => {
-        const payload = {
-            customer_name: "MVP Guest",
-            total_amount: item.price,
-            items: [{ id: item.id, qty: 1 }]
-        };
+    if (loading) return (
+        <div className="p-12 text-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="text-gray-400">Loading Menu...</p>
+        </div>
+    );
 
-        try {
-            const res = await fetch('/api/v1/store/orders', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (res.ok) {
-                alert(`SUCCESS: Ordered ${item.name}! Check the database.`);
-            } else {
-                alert("Error placing order.");
-            }
-        } catch (e) {
-            console.error(e);
-            alert("Network error");
-        }
-    };
-
-    if (loading) return <div className="p-4 text-center">Loading Menu...</div>;
-    if (items.length === 0) return <div className="p-4 text-center">No items found.</div>;
+    if (categories.length === 0) return (
+        <div className="p-12 text-center bg-white rounded-lg border border-dashed border-gray-300">
+            <p className="text-gray-500">Menu is currently empty.</p>
+        </div>
+    );
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-            {items.map((item) => (
-                <div key={item.id} className="bg-white shadow-md rounded-lg p-4 flex justify-between items-center border-l-4 border-primary">
-                    <div>
-                        <h3 className="font-bold text-lg text-gray-800">{item.name}</h3>
-                        <span className="text-gray-500 text-sm">
-                            ${(item.price / 100).toFixed(2)}
-                        </span>
+        <div className="pb-20">
+            {categories.map((cat) => {
+                if (cat.items.length === 0) return null;
+
+                return (
+                    <div key={cat.id} id={`cat-${cat.id}`} className="mb-12">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">{cat.name}</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {cat.items.map((item) => (
+                                <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow flex">
+                                    <div className="flex-1 p-4 flex flex-col justify-between">
+                                        <div>
+                                            <h3 className="font-bold text-lg text-gray-900">{item.name}</h3>
+                                            {item.description && (
+                                                <p className="text-gray-500 text-sm mt-1 line-clamp-2">{item.description}</p>
+                                            )}
+                                        </div>
+                                        <div className="mt-4 flex items-center justify-between">
+                                            <span className="font-semibold text-gray-800">
+                                                ${(item.price / 100).toFixed(2)}
+                                            </span>
+                                            <button
+                                                onClick={() => addToCart(item)}
+                                                className="bg-gray-100 text-gray-800 p-2 rounded-full hover:bg-primary hover:text-primary-fg transition-colors"
+                                            >
+                                                <Plus size={20} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {item.image_url && (
+                                        <div
+                                            className="w-32 bg-cover bg-center"
+                                            style={{ backgroundImage: `url(${item.image_url})` }}
+                                        />
+                                    )}
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                    <button
-                        className="bg-primary text-white px-4 py-2 rounded hover:opacity-90 transition-opacity font-medium"
-                        onClick={() => handleQuickOrder(item)}
-                    >
-                        Quick Buy
-                    </button>
-                </div>
-            ))}
+                );
+            })}
         </div>
     );
 }
