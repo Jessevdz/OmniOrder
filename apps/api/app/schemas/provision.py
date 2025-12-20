@@ -5,7 +5,8 @@ class TenantCreateRequest(BaseModel):
     name: str
     domain: str
     primary_color: str = "#000000"
-    font_family: str = "Inter
+    font_family: str = "Inter"
+    seed_data: bool = True
 
 
 class TenantResponse(BaseModel):
