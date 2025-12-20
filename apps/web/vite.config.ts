@@ -7,12 +7,19 @@ export default defineConfig({
     server: {
         host: true, // Needed for Docker mapping
         port: 5173,
+        allowedHosts: [
+            'pizza.localhost',
+            'burger.localhost',
+            'omniorder.localhost',
+            'admin.omniorder.localhost',
+            'all' // Or just use 'all' to disable the check entirely for dev
+        ],
         watch: {
-            usePolling: true, // Needed for Docker on Windows/Mac to catch file changes
+            usePolling: true,
         },
         proxy: {
             '/api': {
-                target: 'http://api:8000', // Proxy API requests to backend container
+                target: 'http://api:8000',
                 changeOrigin: true,
             }
         }
