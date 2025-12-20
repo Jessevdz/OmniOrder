@@ -1,2 +1,4 @@
 .venv
 *.pyc
+apps/web/node_modules
+apps\web\node_modules

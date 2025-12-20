@@ -24,6 +24,8 @@ def provision_tenant(payload: TenantCreateRequest, db: Session = Depends(get_db)
     # Check if domain exists
     existing = db.query(Tenant).filter(Tenant.domain == payload.domain).first()
     if existing:
+        # If it exists, we assume success for MVP idempotency (or return 400)
+        # Returning 400 to match your script's "Tenant already exists" check
         raise HTTPException(status_code=400, detail="Domain already taken")
 
     # 2. Create Record
@@ -43,8 +45,6 @@ def provision_tenant(payload: TenantCreateRequest, db: Session = Depends(get_db)
         raise HTTPException(status_code=500, detail=str(e))
 
     # 3. Create Schema (Raw SQL)
-    # WARNING: Vulnerable to injection if schema_name wasn't sanitized.
-    # Since we sanitize `clean_name` strictly above, this is acceptable for MVP.
     try:
         db.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema_name}"))
         db.commit()
@@ -52,9 +52,7 @@ def provision_tenant(payload: TenantCreateRequest, db: Session = Depends(get_db)
         raise HTTPException(status_code=500, detail=f"Failed to create schema: {e}")
 
     # 4. Create Tables in Schema
-    # In a full production app, we would call Alembic here.
-    # For this MVP, to keep it simple and avoid subprocess calls,
-    # we will use SQLAlchemy's create_all with the specific schema.
+    # FIX: Use engine.begin() + SET search_path instead of invalid 'schema' arg
     from app.db.base import Base
     from app.db.session import engine
 
@@ -63,8 +61,20 @@ def provision_tenant(payload: TenantCreateRequest, db: Session = Depends(get_db)
         table for table in Base.metadata.sorted_tables if table.schema != "public"
     ]
 
-    # Create them specifically in the new schema
-    Base.metadata.create_all(bind=engine, tables=tenant_tables, schema=schema_name)
+    try:
+        with engine.begin() as connection:
+            # Context Switch: Force this connection to look at the new schema
+            connection.execute(text(f"SET search_path TO {schema_name}"))
+
+            # Create tables. Because search_path is set, and models have schema=None,
+            # they will be created inside 'tenant_xxx'.
+            Base.metadata.create_all(bind=connection, tables=tenant_tables)
+
+    except Exception as e:
+        # Cleanup if table creation fails
+        db.delete(new_tenant)
+        db.commit()
+        raise HTTPException(status_code=500, detail=f"Table creation failed: {e}")
 
     return TenantResponse(
         id=str(new_tenant.id),
