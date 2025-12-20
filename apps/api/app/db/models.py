@@ -9,7 +9,7 @@ from app.db.base import Base
 
 class Tenant(Base):
     __tablename__ = "tenants"
-    __table_args__ = {"schema": "public"}  # Pinned to public
+    __table_args__ = {"schema": "public"}
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False)
@@ -19,8 +19,16 @@ class Tenant(Base):
 
 
 # --- TENANT SCHEMA MODELS ---
-# These do not have a specific 'schema' arg.
-# They will be created in whichever schema is active in the search_path.
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    full_name = Column(String)
+    role = Column(String, default="admin")  # 'admin', 'manager', 'kitchen'
 
 
 class MenuItem(Base):
@@ -39,4 +47,4 @@ class Order(Base):
     customer_name = Column(String, nullable=False)
     status = Column(String, default="PENDING")
     total_amount = Column(Integer, nullable=False)
-    items = Column(JSON, nullable=False)  # Snapshot of items
+    items = Column(JSON, nullable=False)
