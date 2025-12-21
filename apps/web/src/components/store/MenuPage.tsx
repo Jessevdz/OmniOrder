@@ -3,7 +3,8 @@ import { useOutletContext } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import { HeroSection } from "../../components/store/HeroSection";
 import { CategoryNav } from "../../components/store/CategoryNav";
-import { MenuItemRow } from "../../components/store/MenuItemRow";
+// 1. Import new component
+import { MenuGridItem } from "../../components/store/MenuGridItem";
 
 interface MenuItem {
     id: string;
@@ -12,6 +13,7 @@ interface MenuItem {
     price: number;
     image_url?: string;
     is_available: boolean;
+    category_id: string; // Ensure this exists in type
 }
 
 interface Category {
@@ -26,16 +28,16 @@ export function MenuPage() {
     const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState<string>('');
     const { addToCart } = useCart();
-
-    // We use a ref to prevent observer setup on every render
     const observerRef = useRef<IntersectionObserver | null>(null);
+
+    // Get preset for logic
+    const presetName = config.theme_config?.preset || 'mono-luxe';
 
     useEffect(() => {
         fetch('/api/v1/store/menu')
             .then(res => res.json())
             .then(data => {
                 setCategories(data);
-                // Set initial active category
                 if (data.length > 0) setActiveCategory(data[0].id);
                 setLoading(false);
             })
@@ -80,63 +82,31 @@ export function MenuPage() {
         return () => observerRef.current?.disconnect();
     }, [loading, categories]);
 
-    // --- SKELETON LOADER ---
-    if (loading) return (
-        <div className="min-h-screen bg-app animate-pulse">
-            <div className="h-[45vh] min-h-[350px] w-full bg-gray-300" />
-            <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200">
-                <div className="max-w-screen-lg mx-auto px-4 py-4 flex gap-3 overflow-hidden">
-                    {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="h-9 w-24 bg-gray-300 rounded-full shrink-0" />
-                    ))}
-                </div>
-            </div>
-            <div className="max-w-screen-lg mx-auto px-4 py-8 space-y-12">
-                {[1, 2].map((section) => (
-                    <div key={section} className="space-y-6">
-                        <div className="h-8 w-48 bg-gray-300 rounded" />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {[1, 2, 3, 4].map((item) => (
-                                <div key={item} className="flex gap-4 p-4 border border-gray-200 rounded-xl bg-white h-40">
-                                    <div className="flex-1 space-y-3 py-1">
-                                        <div className="h-6 w-3/4 bg-gray-300 rounded" />
-                                        <div className="space-y-2">
-                                            <div className="h-4 w-full bg-gray-200 rounded" />
-                                            <div className="h-4 w-5/6 bg-gray-200 rounded" />
-                                        </div>
-                                    </div>
-                                    <div className="w-28 h-28 md:w-36 md:h-36 bg-gray-300 rounded-xl shrink-0" />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-
+    // --- RENDER ---
     return (
         <>
-            <HeroSection name={config.name} />
-
-            {/* Pass activeCategory to trigger the visual highlight */}
+            <HeroSection name={config.name} preset={presetName} />
             <CategoryNav categories={categories} activeCategory={activeCategory} />
 
-            <div className="max-w-screen-lg mx-auto px-4 py-8">
+            <div className="max-w-screen-xl mx-auto px-4 py-8 md:px-8">
                 {categories.map((cat) => {
                     if (cat.items.length === 0) return null;
 
                     return (
-                        <div key={cat.id} id={`cat-${cat.id}`} className="mb-12 scroll-mt-40">
-                            <h2 className="text-2xl font-bold font-heading mb-4 text-text-main pb-2 border-b border-border">
+                        <div key={cat.id} id={`cat-${cat.id}`} className="mb-16 scroll-mt-32">
+                            <h2 className="text-3xl font-bold font-heading mb-6 text-text-main case-brand flex items-center gap-4">
                                 {cat.name}
+                                <span className="h-px flex-1 bg-border/60"></span>
                             </h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                            {/* 2. Changed from list to responsive grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                                 {cat.items.map((item) => (
-                                    <MenuItemRow
+                                    <MenuGridItem
                                         key={item.id}
                                         item={item}
                                         onAdd={addToCart}
+                                        preset={presetName}
                                     />
                                 ))}
                             </div>
@@ -144,7 +114,7 @@ export function MenuPage() {
                     );
                 })}
 
-                {categories.length === 0 && (
+                {categories.length === 0 && !loading && (
                     <div className="text-center py-20 text-text-muted">
                         No menu items found.
                     </div>
