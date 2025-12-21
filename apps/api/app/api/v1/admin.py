@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
@@ -12,6 +12,9 @@ from app.schemas.menu import (
     MenuItemResponse,
 )
 from app.api.v1.deps import get_current_user
+from pydantic import BaseModel
+from sqlalchemy import text
+from app.db.models import Tenant
 
 router = APIRouter()
 
@@ -92,3 +95,82 @@ def update_item(
     db.commit()
     db.refresh(item)
     return item
+
+
+# --- Settings / Theme Config ---
+
+
+class ThemeConfigSchema(BaseModel):
+    preset: str
+    primary_color: str
+    font_family: str
+
+
+@router.get("/settings", response_model=ThemeConfigSchema)
+def get_tenant_settings(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Fetch settings from the Public Tenant table based on the current host.
+    """
+    # 1. Resolve Tenant from Host (Same logic as deps, but we need the object)
+    host = request.headers.get("host", "").split(":")[0]
+
+    # We must switch to public schema to read the Tenant table
+    db.execute(text("SET search_path TO public"))
+    tenant = db.query(Tenant).filter(Tenant.domain == host).first()
+
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant config not found")
+
+    config = tenant.theme_config or {}
+
+    # Switch back to tenant schema for safety (though request ends here)
+    db.execute(text(f"SET search_path TO {tenant.schema_name}, public"))
+
+    return ThemeConfigSchema(
+        preset=config.get("preset", "mono-luxe"),
+        primary_color=config.get("primary_color", "#000000"),
+        font_family=config.get("font_family", "Inter"),
+    )
+
+
+@router.put("/settings", response_model=ThemeConfigSchema)
+def update_tenant_settings(
+    payload: ThemeConfigSchema,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Update the public tenant record with new theme config.
+    """
+    host = request.headers.get("host", "").split(":")[0]
+
+    # 1. Switch to Public to write
+    db.execute(text("SET search_path TO public"))
+
+    tenant = db.query(Tenant).filter(Tenant.domain == host).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    # 2. Update Field
+    # We use a shallow merge or replacement
+    new_config = {
+        "preset": payload.preset,
+        "primary_color": payload.primary_color,
+        "font_family": payload.font_family,
+    }
+
+    # SQLAlchemy JSON field update
+    tenant.theme_config = new_config
+
+    db.commit()
+    db.refresh(tenant)
+
+    # 3. Restore Context
+    db.execute(text(f"SET search_path TO {tenant.schema_name}, public"))
+
+    return payload

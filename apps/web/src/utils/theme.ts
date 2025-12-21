@@ -1,6 +1,6 @@
 import React from 'react';
 
-// Definitions from docs/design-document.md
+// 1. Define the Tokens based on Design Doc Section 5
 export const THEME_PRESETS: Record<string, React.CSSProperties> = {
     'mono-luxe': {
         '--color-primary': '#000000',
@@ -48,28 +48,30 @@ export const THEME_PRESETS: Record<string, React.CSSProperties> = {
     } as React.CSSProperties,
 };
 
-interface ThemeOverrides {
+export interface TenantThemeConfig {
+    preset?: string;
     primary_color?: string;
     font_family?: string;
 }
 
-export const applyTheme = (presetName: string = 'mono-luxe', overrides: ThemeOverrides) => {
+export const applyTheme = (config: TenantThemeConfig) => {
+    // 1. Load Preset (default to Mono Luxe)
+    const presetName = config.preset || 'mono-luxe';
     const base = THEME_PRESETS[presetName] || THEME_PRESETS['mono-luxe'];
 
     const themeStyles: React.CSSProperties = {
         ...base,
     };
 
-    // Inject API overrides
-    if (overrides.primary_color) {
-        themeStyles['--color-primary'] = overrides.primary_color;
-        // In a real app, we would calculate contrast here using a color lib
-        themeStyles['--color-primary-contrast'] = '#ffffff';
+    // 2. Apply Overrides (if manual edits were made on top of preset)
+    if (config.primary_color) {
+        themeStyles['--color-primary'] = config.primary_color;
+        // In a real app, calculate contrast dynamically here
     }
 
-    if (overrides.font_family) {
-        themeStyles['--font-heading'] = overrides.font_family;
-        themeStyles['--font-body'] = overrides.font_family;
+    if (config.font_family) {
+        themeStyles['--font-heading'] = config.font_family;
+        themeStyles['--font-body'] = config.font_family;
     }
 
     return themeStyles;

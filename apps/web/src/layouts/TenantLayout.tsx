@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTenantConfig } from '../hooks/useTenantConfig';
-import { LayoutGrid, Utensils, Users, LogOut, Store } from 'lucide-react';
+import { LayoutGrid, Utensils, Users, LogOut, Store, Settings } from 'lucide-react';
 
 export const TenantLayout = () => {
     const { logout } = useAuth();
@@ -49,6 +49,13 @@ export const TenantLayout = () => {
                     >
                         <Users size={18} />
                         Staff Accounts
+                    </NavLink>
+                    <NavLink
+                        to="/admin/settings"
+                        className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-md transition-all font-medium ${isActive ? 'bg-gray-100 text-primary' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}
+                    >
+                        <Settings size={18} />
+                        Settings
                     </NavLink>
                 </nav>
 

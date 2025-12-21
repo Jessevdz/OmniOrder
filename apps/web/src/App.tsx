@@ -21,6 +21,7 @@ import { PlatformDashboard } from './pages/platform/Dashboard';
 // Tenant Pages (Restaurant Admin)
 import { MenuBuilder } from './pages/tenant/MenuBuilder';
 import { TenantDashboard } from './pages/tenant/Dashboard';
+import { TenantSettings } from './pages/tenant/Settings';
 
 // KDS
 import { KitchenDisplay } from './pages/kitchen/KitchenDisplay';
@@ -70,6 +71,7 @@ function App() {
                             <Route path="dashboard" element={<TenantDashboard />} />
                             <Route path="menu" element={<MenuBuilder />} />
                             <Route path="staff" element={<div>Staff Management Placeholder</div>} />
+                            <Route path="settings" element={<TenantSettings />} />
                         </Route>
 
                     </Routes>
