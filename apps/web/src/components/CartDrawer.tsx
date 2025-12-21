@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { BrandButton } from './common/BrandButton';
-import { X, ShoppingBag, Trash2 } from 'lucide-react';
+import { X, ShoppingBag, Trash2, User, Hash } from 'lucide-react';
 
 export function CartDrawer() {
     const {
@@ -8,16 +9,26 @@ export function CartDrawer() {
         cartTotal, clearCart
     } = useCart();
 
+    // Local state for fulfillment details
+    const [customerName, setCustomerName] = useState('');
+    const [tableNumber, setTableNumber] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const handleCheckout = async () => {
         if (items.length === 0) return;
+        if (!customerName.trim()) {
+            alert("Please enter your name");
+            return;
+        }
 
-        // Construct payload for Server-Side Calculation
+        setIsSubmitting(true);
+
         const payload = {
-            customer_name: "Online Guest",
+            customer_name: customerName,
+            table_number: tableNumber || null,
             items: items.map(i => ({
                 id: i.id,
                 qty: i.qty,
-                // Map internal cart structure to API schema
                 modifiers: i.modifiers.map(m => ({ optionId: m.optionId }))
             }))
         };
@@ -31,8 +42,11 @@ export function CartDrawer() {
 
             if (res.ok) {
                 const data = await res.json();
-                alert(`Order Placed! Total: $${(data.total_amount / 100).toFixed(2)}`);
+                // Show Ticket Number in success message
+                alert(`Order #${data.ticket_number} Placed!\nTotal: $${(data.total_amount / 100).toFixed(2)}`);
                 clearCart();
+                setCustomerName('');
+                setTableNumber('');
                 toggleDrawer(false);
             } else {
                 const err = await res.json();
@@ -41,6 +55,8 @@ export function CartDrawer() {
         } catch (e) {
             console.error(e);
             alert("Network Error");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -48,13 +64,11 @@ export function CartDrawer() {
 
     return (
         <>
-            {/* Backdrop */}
             <div
                 className="fixed inset-0 bg-black/50 z-40 transition-opacity"
                 onClick={() => toggleDrawer(false)}
             />
 
-            {/* Drawer */}
             <div className="fixed inset-y-0 right-0 w-full md:w-96 bg-white shadow-2xl z-50 flex flex-col transform transition-transform">
                 <div className="p-4 bg-primary text-primary-fg flex justify-between items-center shadow-md">
                     <div className="flex items-center gap-2">
@@ -89,8 +103,6 @@ export function CartDrawer() {
                                 <div className="flex-1">
                                     <h4 className="font-semibold text-gray-800">{item.name}</h4>
                                     <p className="text-sm text-gray-500">Qty: {item.qty}</p>
-
-                                    {/* Display modifiers in cart for user confirmation */}
                                     {item.modifiers.length > 0 && (
                                         <div className="text-xs text-gray-500 mt-1">
                                             {item.modifiers.map(m => (
@@ -100,7 +112,6 @@ export function CartDrawer() {
                                     )}
                                 </div>
                                 <div className="flex flex-col items-end justify-between">
-                                    {/* Calculate visual total for display (base + modifiers) */}
                                     <span className="font-bold">
                                         ${(((item.price + item.modifiers.reduce((a, b) => a + b.price, 0)) * item.qty) / 100).toFixed(2)}
                                     </span>
@@ -116,18 +127,48 @@ export function CartDrawer() {
                     )}
                 </div>
 
+                {/* Fulfillment Details Form */}
                 {items.length > 0 && (
-                    <div className="p-6 bg-gray-50 border-t">
+                    <div className="p-4 bg-gray-50 border-t space-y-3">
+                        <h3 className="font-bold text-gray-700 text-sm uppercase">Guest Details</h3>
+
+                        <div className="relative">
+                            <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Your Name (Required)"
+                                value={customerName}
+                                onChange={(e) => setCustomerName(e.target.value)}
+                                className="w-full pl-10 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-primary outline-none"
+                            />
+                        </div>
+
+                        <div className="relative">
+                            <Hash size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Table Number (Optional)"
+                                value={tableNumber}
+                                onChange={(e) => setTableNumber(e.target.value)}
+                                className="w-full pl-10 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-primary outline-none"
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {items.length > 0 && (
+                    <div className="p-6 bg-white border-t">
                         <div className="flex justify-between text-lg font-bold mb-4">
-                            <span>Estimated Total</span>
+                            <span>Total</span>
                             <span>${(cartTotal / 100).toFixed(2)}</span>
                         </div>
                         <BrandButton
                             fullWidth
                             size="lg"
                             onClick={handleCheckout}
+                            disabled={isSubmitting}
                         >
-                            Checkout
+                            {isSubmitting ? 'Placing Order...' : 'Confirm Order'}
                         </BrandButton>
                     </div>
                 )}

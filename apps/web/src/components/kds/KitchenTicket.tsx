@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Check } from 'lucide-react';
+import { Clock, Check, Users } from 'lucide-react';
 
 interface OrderItem {
     id: string;
@@ -9,7 +9,9 @@ interface OrderItem {
 
 interface Order {
     id: string;
+    ticket_number: number; // We use this now
     customer_name: string;
+    table_number?: string; // We use this now
     status: string;
     items: OrderItem[];
     created_at: string;
@@ -23,25 +25,18 @@ interface KitchenTicketProps {
 export const KitchenTicket: React.FC<KitchenTicketProps> = ({ order, onBump }) => {
     const [elapsed, setElapsed] = useState(0);
 
-    // Calculate initial elapsed time and set up interval
     useEffect(() => {
         const startTime = new Date(order.created_at).getTime();
-
         const updateTimer = () => {
             const now = new Date().getTime();
             const diffInSeconds = Math.floor((now - startTime) / 1000);
             setElapsed(diffInSeconds > 0 ? diffInSeconds : 0);
         };
-
-        updateTimer(); // Initial run
+        updateTimer();
         const interval = setInterval(updateTimer, 1000);
         return () => clearInterval(interval);
     }, [order.created_at]);
 
-    // Design Doc 7.B: Color Logic
-    // 0-10 mins (600s): Green
-    // 10-20 mins (1200s): Yellow
-    // 20+ mins: Red
     const getHeaderColor = () => {
         if (elapsed > 1200) return 'bg-red-600';
         if (elapsed > 600) return 'bg-yellow-600 text-black';
@@ -56,19 +51,28 @@ export const KitchenTicket: React.FC<KitchenTicketProps> = ({ order, onBump }) =
 
     return (
         <div className="flex flex-col bg-gray-800 border-2 border-gray-700 shadow-xl h-full animate-in fade-in zoom-in-95 duration-200">
-            {/* Header Strip */}
+            {/* Header Strip with Ticket Number */}
             <div className={`p-3 flex justify-between items-center ${getHeaderColor()} font-mono`}>
-                <span className="text-xl font-black">#{order.id.slice(0, 4)}</span>
+                <span className="text-3xl font-black">
+                    #{order.ticket_number.toString().padStart(3, '0')}
+                </span>
                 <div className="flex items-center gap-2 font-bold text-lg">
                     <Clock size={20} strokeWidth={2.5} />
                     <span>{formatTime(elapsed)}</span>
                 </div>
             </div>
 
-            {/* Meta Data */}
-            <div className="bg-gray-900 px-4 py-2 border-b border-gray-700 flex justify-between text-gray-400 text-sm font-mono">
-                <span className="truncate max-w-[60%]">{order.customer_name}</span>
-                <span>Dine-in</span>
+            {/* Meta Data: Name & Table */}
+            <div className="bg-gray-900 px-4 py-2 border-b border-gray-700 flex flex-col text-sm font-mono gap-1">
+                <div className="flex justify-between items-center">
+                    <span className="truncate font-bold text-lg text-white">{order.customer_name}</span>
+                </div>
+                {order.table_number && (
+                    <div className="flex items-center gap-2 text-blue-400">
+                        <Users size={14} />
+                        <span className="font-bold">Table {order.table_number}</span>
+                    </div>
+                )}
             </div>
 
             {/* Items List */}
@@ -81,7 +85,6 @@ export const KitchenTicket: React.FC<KitchenTicketProps> = ({ order, onBump }) =
                 ))}
             </div>
 
-            {/* Footer Action */}
             <button
                 onClick={onBump}
                 className="w-full py-4 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white font-black uppercase tracking-widest transition-colors flex items-center justify-center gap-2 border-t border-gray-600"

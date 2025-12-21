@@ -12,7 +12,9 @@ interface OrderItem {
 
 interface Order {
     id: string;
+    ticket_number: number;
     customer_name: string;
+    table_number?: string;
     total_amount: number;
     items: OrderItem[];
     status: 'PENDING' | 'PREPARING' | 'READY';

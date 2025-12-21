@@ -104,7 +104,13 @@ class Order(Base):
     __tablename__ = "orders"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # 1. Fulfillment Details
     customer_name = Column(String, nullable=False)
+    table_number = Column(String, nullable=True)
+
+    # 2. System Fields
+    ticket_number = Column(Integer, nullable=False, default=1)
     status = Column(String, default="PENDING")
     total_amount = Column(Integer, nullable=False)
     items = Column(JSON, nullable=False)

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import text
+from sqlalchemy import text, func
 from app.db.session import get_db
 from app.db.models import (
     Tenant,
@@ -42,25 +42,26 @@ class OrderItemSchema(BaseModel):
 
 class OrderCreateRequest(BaseModel):
     customer_name: str
+    table_number: Optional[str] = None  # New Input
     items: List[OrderItemSchema]
-    # We purposefully exclude total_amount from the input requirement.
-    # If the client sends it, Pydantic will ignore it or we just won't use it.
 
 
 class OrderResponse(BaseModel):
     id: str
+    ticket_number: int
     status: str
     message: str
-    total_amount: int  # Return the authoritative total
+    total_amount: int
 
 
-# New Schema for KDS List
 class OrderDetail(BaseModel):
     id: UUID
+    ticket_number: int
     customer_name: str
+    table_number: Optional[str] = None
     status: str
     total_amount: int
-    items: List[dict]  # Returns the JSON snapshot
+    items: List[dict]
     created_at: datetime
 
     class Config:
@@ -165,6 +166,7 @@ async def update_order_status(
 
     return OrderResponse(
         id=str(order.id),
+        ticket_number=order.ticket_number,
         status=order.status,
         message=f"Order marked as {payload.status}",
         total_amount=order.total_amount,
@@ -176,39 +178,49 @@ async def create_store_order(
     payload: OrderCreateRequest, request: Request, db: Session = Depends(get_db)
 ):
     """
-    Creates an order with SERVER-SIDE price calculation.
+    Creates an order with SERVER-SIDE price calculation and Daily Ticket #.
     """
     tenant = get_tenant_by_host(request, db)
     db.execute(text(f"SET search_path TO {tenant.schema_name}, public"))
 
-    # 1. Fetch all referenced Menu Items and Modifiers in bulk
+    # 1. Logic to Calculate Daily Ticket Number
+    # Get the start of the current day (UTC)
+    today_start = datetime.utcnow().date()
+
+    # Find the highest ticket number created today
+    # We use a locking strategy or simple max query.
+    # For MVP, simple max query + 1 is sufficient.
+    last_order = (
+        db.query(Order.ticket_number)
+        .filter(func.date(Order.created_at) == today_start)
+        .order_by(Order.ticket_number.desc())
+        .first()
+    )
+
+    next_ticket_num = (last_order[0] + 1) if last_order else 1
+
+    # 2. Fetch all referenced Menu Items and Modifiers in bulk (Existing Logic)
     item_ids = [item.id for item in payload.items]
     modifier_ids = [mod.optionId for item in payload.items for mod in item.modifiers]
 
-    # Fetch Items
     db_items = db.query(MenuItem).filter(MenuItem.id.in_(item_ids)).all()
     items_map = {item.id: item for item in db_items}
 
-    # Fetch Modifiers
     db_modifiers = (
         db.query(ModifierOption).filter(ModifierOption.id.in_(modifier_ids)).all()
     )
     mods_map = {mod.id: mod for mod in db_modifiers}
 
-    # 2. Calculate Totals & Build Data Snapshot
+    # 3. Calculate Totals (Existing Logic)
     grand_total = 0
     items_snapshot = []
 
     for item_in in payload.items:
         db_item = items_map.get(item_in.id)
         if not db_item:
-            # Skip invalid items or raise 400. Skipping for resilience.
             continue
 
-        # Start with base price
         item_total_cents = db_item.price
-
-        # Calculate Modifiers
         modifiers_snapshot = []
         for mod_in in item_in.modifiers:
             db_mod = mods_map.get(mod_in.optionId)
@@ -222,11 +234,9 @@ async def create_store_order(
                     }
                 )
 
-        # Multiply by Quantity
         line_total = item_total_cents * item_in.qty
         grand_total += line_total
 
-        # Create Snapshot Item (What we save to DB JSON)
         items_snapshot.append(
             {
                 "id": str(db_item.id),
@@ -241,11 +251,13 @@ async def create_store_order(
     if grand_total == 0 and not items_snapshot:
         raise HTTPException(status_code=400, detail="Order cannot be empty")
 
-    # 3. Create Order Record
+    # 4. Create Order Record with new fields
     new_order = Order(
+        ticket_number=next_ticket_num,  # Saved
         customer_name=payload.customer_name,
+        table_number=payload.table_number,  # Saved
         total_amount=grand_total,
-        items=items_snapshot,  # Stores the JSON structure
+        items=items_snapshot,
         status="PENDING",
     )
 
@@ -255,10 +267,12 @@ async def create_store_order(
         db.commit()
         db.refresh(new_order)
 
-        # Prepare broadcast data
+        # Prepare broadcast data including Ticket # and Table
         order_data = {
             "id": str(new_order.id),
+            "ticket_number": new_order.ticket_number,
             "customer_name": new_order.customer_name,
+            "table_number": new_order.table_number,
             "total_amount": new_order.total_amount,
             "items": new_order.items,
             "status": new_order.status,
@@ -268,7 +282,7 @@ async def create_store_order(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to place order: {e}")
 
-    # 4. Broadcast new order
+    # 5. Broadcast new order
     await manager.broadcast_to_tenant(
         tenant.schema_name,
         {
@@ -279,6 +293,7 @@ async def create_store_order(
 
     return OrderResponse(
         id=str(new_order.id),
+        ticket_number=new_order.ticket_number,
         status=new_order.status,
         message="Order placed successfully",
         total_amount=new_order.total_amount,
