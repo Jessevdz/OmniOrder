@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTenantConfig } from '../../hooks/useTenantConfig';
-import { Upload, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Upload, Image as ImageIcon, Loader2, ArrowUp, ArrowDown } from 'lucide-react';
 
 // Types matching backend
 interface Category { id: string; name: string; rank: number; }
@@ -61,13 +61,46 @@ export function MenuBuilder() {
     // Handlers
     const handleAddCategory = async (e: React.FormEvent) => {
         e.preventDefault();
+        // Determine next rank based on existing
+        const nextRank = categories.length > 0 ? Math.max(...categories.map(c => c.rank)) + 1 : 0;
+
         await fetch('/api/v1/admin/categories', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify(newCat)
+            body: JSON.stringify({ ...newCat, rank: nextRank })
         });
         setNewCat({ name: '' });
         fetchData();
+    };
+
+    const handleReorderCategory = async (index: number, direction: 'up' | 'down') => {
+        const newCats = [...categories];
+        const swapIndex = direction === 'up' ? index - 1 : index + 1;
+
+        // Boundary Check
+        if (swapIndex < 0 || swapIndex >= newCats.length) return;
+
+        // Swap in array
+        [newCats[index], newCats[swapIndex]] = [newCats[swapIndex], newCats[index]];
+
+        // Update rank values based on new array order
+        const updatedCats = newCats.map((cat, idx) => ({ ...cat, rank: idx }));
+
+        // Optimistic UI Update
+        setCategories(updatedCats);
+
+        // API Call
+        const payload = updatedCats.map(c => ({ id: c.id, rank: c.rank }));
+        try {
+            await fetch('/api/v1/admin/categories/reorder', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(payload)
+            });
+        } catch (e) {
+            console.error("Reorder failed", e);
+            fetchData(); // Revert on error
+        }
     };
 
     const handleAddItem = async (e: React.FormEvent) => {
@@ -182,13 +215,32 @@ export function MenuBuilder() {
                             </div>
                         </form>
                         <ul className="space-y-2">
-                            {categories.map(c => (
-                                <li key={c.id} className="p-3 bg-white border rounded shadow-sm flex justify-between">
-                                    <span>{c.name}</span>
-                                    <span className="text-xs text-gray-400">Rank: {c.rank}</span>
+                            {categories.map((c, idx) => (
+                                <li key={c.id} className="p-3 bg-white border rounded shadow-sm flex justify-between items-center transition-all hover:bg-gray-50">
+                                    <div className="flex items-center gap-3">
+                                        <span className="font-bold text-gray-400 w-6">#{idx + 1}</span>
+                                        <span className="font-medium">{c.name}</span>
+                                    </div>
+                                    <div className="flex gap-1">
+                                        <button
+                                            onClick={() => handleReorderCategory(idx, 'up')}
+                                            disabled={idx === 0}
+                                            className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
+                                        >
+                                            <ArrowUp size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleReorderCategory(idx, 'down')}
+                                            disabled={idx === categories.length - 1}
+                                            className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
+                                        >
+                                            <ArrowDown size={16} />
+                                        </button>
+                                    </div>
                                 </li>
                             ))}
                         </ul>
+                        {categories.length > 0 && <p className="text-xs text-gray-400 text-center">Changes are saved automatically.</p>}
                     </div>
                 )}
 

@@ -15,6 +15,7 @@ from app.db.models import (
 from app.schemas.menu import (
     CategoryCreate,
     CategoryResponse,
+    CategoryReorder,  # Imported
     MenuItemCreate,
     MenuItemResponse,
     ModifierGroupCreate,
@@ -70,6 +71,29 @@ def create_category(
     return cat
 
 
+@router.put("/categories/reorder")
+def reorder_categories(
+    payload: List[CategoryReorder],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Batch update category ranks.
+    """
+    # Create a map for O(1) lookup
+    updates_map = {item.id: item.rank for item in payload}
+
+    # Fetch all categories involved
+    categories = db.query(Category).filter(Category.id.in_(updates_map.keys())).all()
+
+    for cat in categories:
+        if cat.id in updates_map:
+            cat.rank = updates_map[cat.id]
+
+    db.commit()
+    return {"message": "Categories reordered successfully"}
+
+
 @router.delete("/categories/{cat_id}")
 def delete_category(
     cat_id: UUID,
@@ -85,8 +109,7 @@ def delete_category(
 
 
 # --- Menu Items ---
-
-
+# ... (Rest of the file remains unchanged)
 @router.get("/items", response_model=List[MenuItemResponse])
 def list_items(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_user)

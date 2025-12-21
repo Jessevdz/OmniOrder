@@ -52,6 +52,12 @@ class CategoryCreate(CategoryBase):
     pass
 
 
+# NEW: Schema for bulk reordering
+class CategoryReorder(BaseModel):
+    id: UUID
+    rank: int
+
+
 class CategoryResponse(CategoryBase):
     id: UUID
 
