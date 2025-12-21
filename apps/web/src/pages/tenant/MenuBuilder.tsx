@@ -69,7 +69,18 @@ export function MenuBuilder() {
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: body ? JSON.stringify(body) : undefined
         });
-        if (!res.ok) throw new Error('API Action Failed');
+
+        if (!res.ok) {
+            // NEW: Try to parse the error detail from FastAPI
+            try {
+                const errData = await res.json();
+                console.error("API Validation Error:", errData);
+                throw new Error(JSON.stringify(errData.detail || errData));
+            } catch (e) {
+                // If parsing fails, fall back to generic
+                throw new Error(`API Failed: ${res.statusText}`);
+            }
+        }
         return res.json();
     };
 
@@ -151,40 +162,69 @@ export function MenuBuilder() {
     };
 
     const handleReorderItem = async (category_id: string, item_id: string, direction: 'up' | 'down') => {
-        // 1. Get all items in this category, sorted by rank
-        const catItems = items.filter(i => i.category_id === category_id).sort((a, b) => (a.rank || 0) - (b.rank || 0));
+        // 1. Get items for this specific category
+        // We trust the API provided the ranks correctly.
+        const catItems = items
+            .filter(i => i.category_id === category_id)
+            .sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0));
 
         const currentIndex = catItems.findIndex(i => i.id === item_id);
         if (currentIndex === -1) return;
 
         const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+
+        // Bounds check
         if (swapIndex < 0 || swapIndex >= catItems.length) return;
 
-        // 2. Swap locally
-        const newCatItems = [...catItems];
-        [newCatItems[currentIndex], newCatItems[swapIndex]] = [newCatItems[swapIndex], newCatItems[currentIndex]];
+        const itemA = catItems[currentIndex];
+        const itemB = catItems[swapIndex];
 
-        // 3. Re-calculate ranks for this specific subset
-        // We only change ranks relative to each other, but we need to ensure the whole list remains consistent.
-        // For simplicity in this MVP, we re-rank the specific category subset from 0..N, or offset them.
-        // A robust way is to just swap the rank values of the two items.
-        const rankA = newCatItems[currentIndex].rank || 0;
-        const rankB = newCatItems[swapIndex].rank || 0;
+        // 2. CRITICAL: Handle "Collision/Tie" Scenario
+        // If the DB has bad data (e.g. both are Rank 0), swapping achieves nothing.
+        // In that specific edge case, we must enforce a sequence.
+        const rankA = itemA.rank ?? 0;
+        const rankB = itemB.rank ?? 0;
 
-        // Perform swap of rank values
-        newCatItems[currentIndex].rank = rankB;
-        newCatItems[swapIndex].rank = rankA;
+        let newRankA, newRankB;
 
-        // 4. Update Global State
+        if (rankA === rankB) {
+            // Data is dirty (collision). Enforce standard spacing.
+            // We give the item moving UP the lower rank number.
+            if (direction === 'up') {
+                newRankA = swapIndex; // e.g. 0
+                newRankB = currentIndex; // e.g. 1
+            } else {
+                newRankA = swapIndex; // e.g. 1
+                newRankB = currentIndex; // e.g. 0
+            }
+        } else {
+            // Data is clean. Perform a standard value swap.
+            newRankA = rankB;
+            newRankB = rankA;
+        }
+
+        // 3. Optimistic UI Update
         const updatedItems = items.map(i => {
-            const found = newCatItems.find(n => n.id === i.id);
-            return found ? found : i;
+            if (i.id === itemA.id) return { ...i, rank: newRankA };
+            if (i.id === itemB.id) return { ...i, rank: newRankB };
+            return i;
         });
         setItems(updatedItems);
 
-        // 5. API Call
-        const payload = newCatItems.map(i => ({ id: i.id, rank: i.rank }));
-        await apiCall('/items/reorder', 'PUT', payload);
+        // 4. API Call
+        // We send only the two changed items to the server.
+        // This minimizes the "blast radius" of the write operation.
+        const payload = [
+            { id: itemA.id!, rank: newRankA },
+            { id: itemB.id!, rank: newRankB }
+        ];
+
+        try {
+            await apiCall('/items/reorder', 'PUT', payload);
+        } catch (e) {
+            console.error("Reorder failed", e);
+            fetchData(); // Rollback on error
+        }
     };
 
     // --- IMAGE UPLOAD ---

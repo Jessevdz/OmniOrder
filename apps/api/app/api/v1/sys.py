@@ -1,12 +1,12 @@
 import uuid
+import re
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.db.session import get_db
-from app.db.models import Tenant, User, Category, MenuItem
+from app.db.models import Tenant
 from app.schemas.provision import TenantCreateRequest, TenantResponse
 from app.core.security import get_password_hash
-import re
 
 router = APIRouter()
 
@@ -21,7 +21,7 @@ def provision_tenant(payload: TenantCreateRequest, db: Session = Depends(get_db)
     if existing:
         raise HTTPException(status_code=400, detail="Domain already taken")
 
-    # 2. Create Tenant Record (with Font in theme_config)
+    # 2. Create Tenant Record
     new_tenant = Tenant(
         name=payload.name,
         domain=payload.domain,
@@ -84,14 +84,14 @@ def provision_tenant(payload: TenantCreateRequest, db: Session = Depends(get_db)
                 },
             )
 
-            # --- B. Seed Data (Phase 4 Logic) ---
+            # --- B. Seed Data (Menu with Ranks) ---
             if payload.seed_data:
                 # 1. Generate IDs for Categories
                 cat_mains_id = uuid.uuid4()
                 cat_sides_id = uuid.uuid4()
                 cat_drinks_id = uuid.uuid4()
 
-                # 2. Insert Categories
+                # 2. Insert Categories (With Explicit Ranks)
                 connection.execute(
                     text(
                         "INSERT INTO categories (id, name, rank) VALUES (:id, :name, :rank)"
@@ -103,12 +103,12 @@ def provision_tenant(payload: TenantCreateRequest, db: Session = Depends(get_db)
                     ],
                 )
 
-                # 3. Insert Menu Items
+                # 3. Insert Menu Items (With Explicit Ranks)
                 connection.execute(
                     text(
                         """
-                        INSERT INTO menu_items (id, name, description, price, image_url, is_available, category_id)
-                        VALUES (:id, :name, :desc, :price, :img, :avail, :cat_id)
+                        INSERT INTO menu_items (id, name, description, price, image_url, is_available, category_id, rank)
+                        VALUES (:id, :name, :desc, :price, :img, :avail, :cat_id, :rank)
                         """
                     ),
                     [
@@ -120,6 +120,7 @@ def provision_tenant(payload: TenantCreateRequest, db: Session = Depends(get_db)
                             "img": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=500&q=60",
                             "avail": True,
                             "cat_id": cat_mains_id,
+                            "rank": 0,
                         },
                         {
                             "id": uuid.uuid4(),
@@ -129,6 +130,7 @@ def provision_tenant(payload: TenantCreateRequest, db: Session = Depends(get_db)
                             "img": "https://images.unsplash.com/photo-1576107232684-1279f390859f?auto=format&fit=crop&w=500&q=60",
                             "avail": True,
                             "cat_id": cat_sides_id,
+                            "rank": 0,
                         },
                         {
                             "id": uuid.uuid4(),
@@ -138,6 +140,7 @@ def provision_tenant(payload: TenantCreateRequest, db: Session = Depends(get_db)
                             "img": "https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=500&q=60",
                             "avail": True,
                             "cat_id": cat_drinks_id,
+                            "rank": 0,
                         },
                     ],
                 )
@@ -146,6 +149,7 @@ def provision_tenant(payload: TenantCreateRequest, db: Session = Depends(get_db)
         # Rollback everything if provisioning fails
         db.delete(new_tenant)
         db.commit()
+        # Drop schema if it was created
         db.execute(text(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE"))
         db.commit()
         raise HTTPException(

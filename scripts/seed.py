@@ -26,8 +26,7 @@ SEEDS = [
 ]
 
 # Define Modifiers to attach to specific items
-# Matches item names created in apps/api/app/api/v1/sys.py
-MODIFIER_Kv = {
+MODIFIER_KV = {
     "The OmniBurger": [
         {
             "name": "Cook Temperature",
@@ -94,8 +93,6 @@ def log(msg, type="info"):
 def get_admin_token(domain):
     """Log in as the tenant admin to perform write operations."""
     try:
-        # Note: In deps.py, we resolve tenant by Host header,
-        # then validate user exists in that tenant.
         headers = {"Host": domain}
         payload = {"username": f"admin@{domain}", "password": "password"}
         res = requests.post(f"{API_URL}/auth/login", data=payload, headers=headers)
@@ -122,6 +119,7 @@ def provision_tenant(payload):
                 f"Tenant '{payload['name']}' already exists. Skipping provision.",
                 "warn",
             )
+            # If it exists, we assume we can still try to seed modifiers
             return True
         else:
             log(f"Provision failed: {res.text}", "error")
@@ -135,7 +133,7 @@ def seed_modifiers(tenant):
     """
     1. Login as Admin.
     2. Fetch Items.
-    3. Add Modifier Groups/Options based on MODIFIER_Kv.
+    3. Add Modifier Groups/Options based on MODIFIER_KV.
     """
     domain = tenant["domain"]
     token = get_admin_token(domain)
@@ -147,21 +145,25 @@ def seed_modifiers(tenant):
     headers = {"Host": domain, "Authorization": f"Bearer {token}"}
 
     # 1. Fetch Items to find IDs
-    res = requests.get(f"{API_URL}/admin/items", headers=headers)
-    if res.status_code != 200:
-        log("Failed to fetch items for modifier seeding.", "error")
-        return
+    try:
+        res = requests.get(f"{API_URL}/admin/items", headers=headers)
+        if res.status_code != 200:
+            log(f"Failed to fetch items for modifier seeding: {res.text}", "error")
+            return
 
-    items = res.json()
+        items = res.json()
+    except Exception as e:
+        log(f"Failed to fetch items: {e}", "error")
+        return
 
     count = 0
     for item in items:
-        if item["name"] in MODIFIER_Kv:
-            # Check if already has modifiers (simple check)
+        if item["name"] in MODIFIER_KV:
+            # Check if already has modifiers (simple check to avoid duplication)
             if item.get("modifier_groups") and len(item["modifier_groups"]) > 0:
                 continue
 
-            configs = MODIFIER_Kv[item["name"]]
+            configs = MODIFIER_KV[item["name"]]
 
             for group_def in configs:
                 # 2. POST /items/{id}/modifiers
@@ -194,7 +196,7 @@ def generate_traffic(tenant):
     log(f"Generating traffic for {domain}...", "info")
 
     try:
-        # 1. Fetch Menu (Public Store Endpoint) - Now returns nested modifiers
+        # 1. Fetch Menu
         res = requests.get(f"{API_URL}/store/menu", headers=headers)
         if res.status_code != 200:
             log("Could not fetch menu.", "error")
@@ -260,7 +262,7 @@ def generate_traffic(tenant):
             # Construct payload
             order_payload = {
                 "customer_name": f"Guest {random.randint(10, 99)}",
-                "total_amount": total_order_amount,
+                "table_number": str(random.randint(1, 20)),
                 "items": final_items_payload,
             }
 
@@ -290,7 +292,7 @@ def main():
     # 1. Provision Tenants
     for tenant in SEEDS:
         if provision_tenant(tenant):
-            # 2. Seed Modifiers (New Step)
+            # 2. Seed Modifiers
             seed_modifiers(tenant)
 
             # 3. Generate Data

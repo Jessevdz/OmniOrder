@@ -136,30 +136,6 @@ def create_item(
     return item
 
 
-@router.put("/items/{item_id}", response_model=MenuItemResponse)
-def update_item(
-    request: Request,
-    item_id: UUID,
-    payload: MenuItemCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
-    if not item:
-        raise HTTPException(status_code=404, detail="Item not found")
-
-    for key, value in payload.model_dump().items():
-        setattr(item, key, value)
-
-    db.commit()
-
-    # Restore context before refresh
-    restore_tenant_context(db, request)
-
-    db.refresh(item)
-    return item
-
-
 @router.put("/items/reorder")
 def reorder_items(
     payload: List[MenuItemReorder],
@@ -178,6 +154,27 @@ def reorder_items(
 
     db.commit()
     return {"message": "Items reordered successfully"}
+
+
+@router.put("/items/{item_id}", response_model=MenuItemResponse)
+def update_item(
+    request: Request,
+    item_id: UUID,
+    payload: MenuItemCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    for key, value in payload.model_dump().items():
+        setattr(item, key, value)
+
+    db.commit()
+    restore_tenant_context(db, request)
+    db.refresh(item)
+    return item
 
 
 @router.delete("/items/{item_id}")
