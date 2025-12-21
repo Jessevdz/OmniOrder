@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@config "../tailwind.config.js";
 
 :root {
     /* Default Theme (Fallback: Mono Luxe) */
