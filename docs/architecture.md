@@ -10,7 +10,9 @@ The platform runs as a containerized micro-service stack orchestrated via Docker
 * **Application Layer:**
     * **API (FastAPI):** Stateless REST and WebSocket server.
     * **Web (React/Vite):** Single Page Application served dynamically.
-* **Data Layer (PostgreSQL):** A single database instance segmented logically by PostgreSQL Schemas.
+* **Data Layer:**
+    * **PostgreSQL:** A single database instance segmented logically by PostgreSQL Schemas.
+    * **MinIO (S3 Compatible):** Object storage for menu images and assets.
 
 
 ```mermaid
@@ -26,21 +28,22 @@ graph TD
         
         subgraph "Data Layer"
             DB[(PostgreSQL 15)]
+            MinIO[(MinIO Object Storage)]
         end
     end
 
-    Client -->|[http://pizza.localhost](http://pizza.localhost)| Nginx
-    Client -->|[http://burger.localhost](http://burger.localhost)| Nginx
+    Client -->|http://pizza.localhost| Nginx
+    Client -->|http://burger.localhost| Nginx
     
     Nginx -->|/api/*| API
     Nginx -->|/*| Web
     
     API -->|SQLAlchemy + Alembic| DB
+    API -->|Boto3 / S3 Protocol| MinIO
     
     note[Host Header Preserved for Tenant Resolution]
     style note fill:#f9f,stroke:#333,stroke-width:2px,color:black
     Client -.-> note
-
 
 ```
 
@@ -58,6 +61,7 @@ The backend is built on **FastAPI** and **SQLAlchemy**, utilizing a middleware-d
 * Resolves the specific Tenant ID and Schema Name from the `public.tenants` table.
 * **Context Switching:** Executes `SET search_path TO {tenant_schema}, public` on the database session. This ensures that a query for `SELECT * FROM orders` automatically hits `tenant_pizzahut.orders` without changing application code.
 
+
 2. **Provisioning System (`/sys/provision`):**
 * Transactional workflow that:
 1. Creates a record in the `public` schema.
@@ -65,9 +69,18 @@ The backend is built on **FastAPI** and **SQLAlchemy**, utilizing a middleware-d
 3. Iterates through SQLAlchemy models to build tables dynamically within that new schema.
 4. Seeds initial data (Admin user, Default Menu).
 
+
+
+
 3. **Real-Time KDS (WebSockets):**
 * The `ConnectionManager` groups WebSocket connections by `schema_name`.
 * When an order is placed via REST, the event is broadcast only to the specific tenant's WebSocket channel, ensuring data privacy.
+
+
+4. **Media Storage (S3/MinIO):**
+* **Endpoint:** `POST /api/v1/media/upload`.
+* **Isolation:** While the bucket (`omniorder-assets`) is shared, file references are stored strictly within the tenant's schema (`menu_items.image_url`).
+* **Implementation:** Uses `boto3` to stream uploads to the internal MinIO container and returns a public-facing URL accessible via the browser.
 
 
 
@@ -172,5 +185,7 @@ The database uses a hybrid shared/isolated approach:
 * **Users:** Authentication and Role-Based Access Control.
 * **Menu Hierarchy:** `Categories` -> `MenuItems` -> `ModifierGroups` -> `ModifierOptions`.
 * **Orders:** Transactional data containing JSON snapshots of ordered items.
+
+
 
 This structure allows the platform to scale to thousands of tenants without massive `WHERE tenant_id = X` clauses, while simplifying data compliance (GDPR/CCPA) by keeping tenant data physically separated in schemas.

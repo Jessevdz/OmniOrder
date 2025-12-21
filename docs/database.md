@@ -223,3 +223,15 @@ Managing schema changes across 1 vs. 1,000 tenants is handled in `apps/api/alemb
 1. Alembic fetches a list of all schemas from `public.tenants`.
 2. It iterates through the list.
 3. For each schema, it sets the search path and runs the migration script (e.g., `add_column_loyalty_points`).
+
+---
+
+## 6. Non-Relational Data (Object Storage)
+
+Binary assets (images) are not stored in PostgreSQL. They are offloaded to an S3-compatible object store (MinIO in local dev, AWS S3 in production).
+
+* **Storage Bucket:** `omniorder-assets` (Public Read Access).
+* **File Naming:** UUID-based filenames to prevent collisions and ensure uniqueness.
+* **Database Reference:** The `menu_items` table stores the full public URL in the `image_url` column (VARCHAR).
+
+This approach keeps the database lightweight and ensures faster backup/restore cycles for the tenant schemas.

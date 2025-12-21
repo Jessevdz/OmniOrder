@@ -4,7 +4,7 @@
 
 *These features fill the gaps between "Prototype" and "Functioning Application."*
 
-### 1. Menu Modifiers & Variations (Backend & Frontend)
+### 1. Menu Modifiers & Variations (Backend & Frontend) [DONE]
 
 The current menu model (`MenuItem`) is flat. Real restaurants require customization.
 
@@ -12,7 +12,7 @@ The current menu model (`MenuItem`) is flat. Real restaurants require customizat
 * **Frontend (MenuBuilder):** Update the CMS to allow nested configurations (e.g., "Choose Size: S/M/L" or "Add-ons: Cheese +$1").
 * **Frontend (Storefront):** Update `ItemDetailModal.tsx` to handle radio buttons (required choices) and checkboxes (optional add-ons) and calculate price adjustments dynamically.
 
-### 2. Image Upload & Storage Service
+### 2. Image Upload & Storage Service [DONE]
 
 Currently, the app relies on external Unsplash URLs.
 

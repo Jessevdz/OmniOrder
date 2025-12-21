@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTenantConfig } from '../../hooks/useTenantConfig';
+import { Upload, Image as ImageIcon, Loader2 } from 'lucide-react';
 
 // Types matching backend
 interface Category { id: string; name: string; rank: number; }
@@ -12,6 +13,7 @@ interface MenuItem {
     image_url: string;
     category_id: string;
     is_available: boolean;
+    modifier_groups?: any[]; // For display in list
 }
 
 export function MenuBuilder() {
@@ -26,9 +28,13 @@ export function MenuBuilder() {
     const [selectedItemForMods, setSelectedItemForMods] = useState<MenuItem | null>(null);
     const [newGroup, setNewGroup] = useState({ name: '', min: 0, max: 1, optionsStr: '' });
 
+    // State for Image Upload
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     // Form State
     const [activeTab, setActiveTab] = useState<'categories' | 'items'>('items');
-    const [newItem, XZ] = useState<MenuItem>({
+    const [newItem, setNewItem] = useState<MenuItem>({
         name: '', description: '', price: 0, image_url: '', category_id: '', is_available: true
     });
     const [newCat, setNewCat] = useState({ name: '' });
@@ -36,13 +42,18 @@ export function MenuBuilder() {
     // Fetch Data
     const fetchData = async () => {
         const headers = { 'Authorization': `Bearer ${token}` };
-        const [catRes, itemRes] = await Promise.all([
-            fetch('/api/v1/admin/categories', { headers }),
-            fetch('/api/v1/admin/items', { headers })
-        ]);
-        setCategories(await catRes.json());
-        setItems(await itemRes.json());
-        setLoading(false);
+        try {
+            const [catRes, itemRes] = await Promise.all([
+                fetch('/api/v1/admin/categories', { headers }),
+                fetch('/api/v1/admin/items', { headers })
+            ]);
+            setCategories(await catRes.json());
+            setItems(await itemRes.json());
+        } catch (error) {
+            console.error("Failed to fetch menu data", error);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => { fetchData(); }, []);
@@ -67,7 +78,7 @@ export function MenuBuilder() {
             body: JSON.stringify(newItem)
         });
         // Reset but keep category for rapid entry
-        XZ(prev => ({ ...prev, name: '', description: '', price: 0, image_url: '' }));
+        setNewItem(prev => ({ ...prev, name: '', description: '', price: 0, image_url: '' }));
         fetchData();
     };
 
@@ -96,6 +107,39 @@ export function MenuBuilder() {
 
         setNewGroup({ name: '', min: 0, max: 1, optionsStr: '' });
         fetchData(); // Refresh to see changes
+    };
+
+    // --- NEW: Image Upload Handler ---
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploading(true);
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const res = await fetch('/api/v1/media/upload', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                    // Note: Do NOT set Content-Type here, browser sets it with boundary for FormData
+                },
+                body: formData
+            });
+
+            if (!res.ok) throw new Error('Upload failed');
+
+            const data = await res.json();
+
+            // Update the form state with the new URL
+            setNewItem(prev => ({ ...prev, image_url: data.url }));
+        } catch (err) {
+            console.error(err);
+            alert("Failed to upload image");
+        } finally {
+            setUploading(false);
+        }
     };
 
     if (loading) return <div>Loading Builder...</div>;
@@ -157,36 +201,85 @@ export function MenuBuilder() {
                                     className="w-full p-2 border rounded"
                                     placeholder="Item Name (e.g. Super Burger)"
                                     value={newItem.name}
-                                    onChange={e => XZ({ ...newItem, name: e.target.value })}
+                                    onChange={e => setNewItem({ ...newItem, name: e.target.value })}
                                 />
                                 <textarea
                                     className="w-full p-2 border rounded"
                                     placeholder="Description"
                                     value={newItem.description}
-                                    onChange={e => XZ({ ...newItem, description: e.target.value })}
+                                    onChange={e => setNewItem({ ...newItem, description: e.target.value })}
                                 />
                                 <div className="flex gap-4">
                                     <input
                                         type="number" className="w-1/2 p-2 border rounded"
                                         placeholder="Price (cents)"
                                         value={newItem.price || ''}
-                                        onChange={e => XZ({ ...newItem, price: parseInt(e.target.value) })}
+                                        onChange={e => setNewItem({ ...newItem, price: parseInt(e.target.value) })}
                                     />
                                     <select
                                         className="w-1/2 p-2 border rounded"
                                         value={newItem.category_id}
-                                        onChange={e => XZ({ ...newItem, category_id: e.target.value })}
+                                        onChange={e => setNewItem({ ...newItem, category_id: e.target.value })}
                                     >
                                         <option value="">Select Category</option>
                                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                     </select>
                                 </div>
-                                <input
-                                    className="w-full p-2 border rounded"
-                                    placeholder="Image URL (https://...)"
-                                    value={newItem.image_url}
-                                    onChange={e => XZ({ ...newItem, image_url: e.target.value })}
-                                />
+
+                                {/* --- IMAGE UPLOAD INPUT --- */}
+                                <div className="border border-gray-300 rounded bg-white p-3">
+                                    <label className="block text-xs font-bold text-gray-500 mb-2 uppercase">Item Image</label>
+
+                                    <div className="flex items-center gap-4">
+                                        {/* Preview */}
+                                        <div className="h-16 w-16 bg-gray-100 rounded border border-gray-200 flex items-center justify-center overflow-hidden relative">
+                                            {newItem.image_url ? (
+                                                <img src={newItem.image_url} alt="Preview" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <ImageIcon className="text-gray-300" size={24} />
+                                            )}
+                                            {uploading && (
+                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                                    <Loader2 className="text-white animate-spin" size={20} />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Inputs */}
+                                        <div className="flex-1 space-y-2">
+                                            {/* Hidden File Input */}
+                                            <input
+                                                type="file"
+                                                ref={fileInputRef}
+                                                onChange={handleImageUpload}
+                                                className="hidden"
+                                                accept="image/*"
+                                            />
+
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    disabled={uploading}
+                                                    className="bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded text-sm font-medium hover:bg-gray-50 flex items-center gap-2"
+                                                >
+                                                    <Upload size={14} />
+                                                    Upload Photo
+                                                </button>
+
+                                                {/* Fallback to URL text if needed */}
+                                                <input
+                                                    className="flex-1 p-1.5 border rounded text-sm text-gray-500"
+                                                    placeholder="Or paste URL..."
+                                                    value={newItem.image_url}
+                                                    onChange={e => setNewItem({ ...newItem, image_url: e.target.value })}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {/* --- END IMAGE UPLOAD --- */}
+
                                 <button className="w-full bg-green-600 text-white py-2 rounded font-bold hover:bg-green-700">
                                     Save Item to Database
                                 </button>
