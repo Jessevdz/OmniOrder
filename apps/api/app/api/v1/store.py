@@ -15,6 +15,7 @@ from app.core.socket import manager
 from pydantic import BaseModel
 from typing import List, Literal
 from datetime import datetime
+from uuid import UUID  # <--- Added Import
 
 router = APIRouter()
 
@@ -48,7 +49,7 @@ class OrderResponse(BaseModel):
 
 # New Schema for KDS List
 class OrderDetail(BaseModel):
-    id: str
+    id: UUID  # <--- Changed from str to UUID to handle ORM objects
     customer_name: str
     status: str
     total_amount: int
@@ -188,7 +189,7 @@ async def create_store_order(
             "total_amount": new_order.total_amount,
             "items": new_order.items,
             "status": new_order.status,
-            "created_at": str(datetime.utcnow()),  # Approx time for immediate broadcast
+            "created_at": str(datetime.utcnow()),
         }
         db.commit()
     except Exception:
