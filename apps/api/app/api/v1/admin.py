@@ -23,9 +23,21 @@ from app.schemas.menu import (
 from app.api.v1.deps import get_current_user
 from pydantic import BaseModel
 from sqlalchemy import text
-from app.db.models import Tenant
 
 router = APIRouter()
+
+
+# --- Helper to restore context ---
+def restore_tenant_context(db: Session, request: Request):
+    """
+    Re-applies the search_path after a commit resets the transaction.
+    """
+    host = request.headers.get("host", "").split(":")[0]
+    # We query public.tenants explicitly to be safe
+    tenant = db.query(Tenant).filter(Tenant.domain == host).first()
+    if tenant:
+        db.execute(text(f"SET search_path TO {tenant.schema_name}, public"))
+
 
 # --- Categories ---
 
@@ -39,13 +51,21 @@ def list_categories(
 
 @router.post("/categories", response_model=CategoryResponse)
 def create_category(
+    request: Request,
     payload: CategoryCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     cat = Category(**payload.model_dump())
     db.add(cat)
+
+    # 1. Commit ends the current transaction (and the search_path setting)
     db.commit()
+
+    # 2. Restore the search_path for the new transaction that refresh() will start
+    restore_tenant_context(db, request)
+
+    # 3. Refresh the object
     db.refresh(cat)
     return cat
 
@@ -76,19 +96,26 @@ def list_items(
 
 @router.post("/items", response_model=MenuItemResponse)
 def create_item(
+    request: Request,
     payload: MenuItemCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     item = MenuItem(**payload.model_dump())
     db.add(item)
+
     db.commit()
+
+    # Restore context before refresh
+    restore_tenant_context(db, request)
+
     db.refresh(item)
     return item
 
 
 @router.put("/items/{item_id}", response_model=MenuItemResponse)
 def update_item(
+    request: Request,
     item_id: UUID,
     payload: MenuItemCreate,
     db: Session = Depends(get_db),
@@ -102,12 +129,17 @@ def update_item(
         setattr(item, key, value)
 
     db.commit()
+
+    # Restore context before refresh
+    restore_tenant_context(db, request)
+
     db.refresh(item)
     return item
 
 
 @router.post("/items/{item_id}/modifiers", response_model=ModifierGroupResponse)
 def add_modifier_group(
+    request: Request,
     item_id: UUID,
     payload: ModifierGroupCreate,
     db: Session = Depends(get_db),
@@ -141,6 +173,10 @@ def add_modifier_group(
         )
 
     db.commit()
+
+    # Restore context before refresh
+    restore_tenant_context(db, request)
+
     db.refresh(group)
     return group
 
