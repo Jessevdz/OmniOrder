@@ -17,12 +17,20 @@ interface Order {
     table_number?: string;
     total_amount: number;
     items: OrderItem[];
-    status: 'PENDING' | 'PREPARING' | 'READY';
+    status: string; // PENDING | QUEUED | PREPARING | READY
     created_at: string;
 }
 
 // Simple Base64 "Ding" Sound
 const ALERT_SOUND = "data:audio/mp3;base64,//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq";
+
+// Lane Configuration
+const LANES = [
+    { id: 'PENDING', label: 'New Orders', color: 'border-blue-500/50' },
+    { id: 'QUEUED', label: 'To Do', color: 'border-yellow-500/50' },
+    { id: 'PREPARING', label: 'Cooking', color: 'border-orange-500/50' },
+    { id: 'READY', label: 'Done / Pick Up', color: 'border-green-500/50' },
+];
 
 export function KitchenDisplay() {
     const { config } = useTenantConfig();
@@ -102,9 +110,12 @@ export function KitchenDisplay() {
                 // Handle Status Updates (Sync from other screens)
                 if (data.event === 'order_update') {
                     const { id, status } = data.order;
-                    setOrders(prev => prev.map(o =>
-                        o.id === id ? { ...o, status } : o
-                    ));
+                    setOrders(prev => {
+                        if (status === 'COMPLETED') {
+                            return prev.filter(o => o.id !== id);
+                        }
+                        return prev.map(o => o.id === id ? { ...o, status } : o);
+                    });
                 }
             };
 
@@ -126,27 +137,26 @@ export function KitchenDisplay() {
     }, [config, isActive]);
 
     // --- 4. Logic ---
-    const handleBump = async (orderId: string) => {
+    const handleStatusChange = async (orderId: string, newStatus: string) => {
         // Optimistic UI Update
-        setOrders(prev => prev.map(o =>
-            o.id === orderId ? { ...o, status: 'READY' } : o
-        ));
+        setOrders(prev => {
+            if (newStatus === 'COMPLETED') {
+                return prev.filter(o => o.id !== orderId);
+            }
+            return prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o);
+        });
 
         // API Call to Persist
         try {
             await fetch(`/api/v1/store/orders/${orderId}/status`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'READY' })
+                body: JSON.stringify({ status: newStatus })
             });
         } catch (err) {
-            console.error("Failed to bump order", err);
-            // Revert on failure (optional)
+            console.error("Failed to update order status", err);
         }
     };
-
-    // Filter out orders that are marked as READY/COMPLETED
-    const activeOrders = orders.filter(o => o.status !== 'READY');
 
     // --- 5. Render ---
     if (!config) return <div className="bg-neutral-950 h-screen text-white flex items-center justify-center">Loading KDS...</div>;
@@ -171,9 +181,9 @@ export function KitchenDisplay() {
     }
 
     return (
-        <div className="min-h-screen bg-[#121212] text-gray-100 font-sans flex flex-col">
+        <div className="h-screen bg-[#121212] text-gray-100 font-sans flex flex-col overflow-hidden">
             {/* Top Bar */}
-            <header className="bg-neutral-900 border-b border-gray-800 p-4 flex justify-between items-center h-16 shadow-md z-10 sticky top-0">
+            <header className="bg-neutral-900 border-b border-gray-800 p-4 flex justify-between items-center h-16 shadow-md shrink-0">
                 <div className="flex items-center gap-4">
                     <h1 className="text-xl font-bold tracking-wider text-gray-200">
                         OMNI<span className="text-primary">KDS</span>
@@ -186,7 +196,7 @@ export function KitchenDisplay() {
                 <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2">
                         <span className="text-gray-400 text-sm uppercase tracking-widest font-bold">Ticket Count:</span>
-                        <span className="text-2xl font-black text-white">{activeOrders.length}</span>
+                        <span className="text-2xl font-black text-white">{orders.length}</span>
                     </div>
                     <div className="h-6 w-px bg-gray-700"></div>
                     <div className="flex items-center gap-2">
@@ -199,27 +209,43 @@ export function KitchenDisplay() {
                 </div>
             </header>
 
-            {/* Grid Canvas */}
-            <main className="flex-1 p-4 overflow-y-auto">
+            {/* Kanban Board */}
+            <main className="flex-1 p-4 overflow-hidden">
                 {loading ? (
                     <div className="h-full flex items-center justify-center">
                         <Loader2 className="animate-spin text-gray-600" size={48} />
                     </div>
-                ) : activeOrders.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center opacity-20">
-                        <Bell size={120} />
-                        <h2 className="text-4xl font-bold mt-8">All Caught Up</h2>
-                        <p className="text-xl mt-2">Waiting for new orders...</p>
-                    </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 auto-rows-max">
-                        {activeOrders.map(order => (
-                            <KitchenTicket
-                                key={order.id}
-                                order={order}
-                                onBump={() => handleBump(order.id)}
-                            />
-                        ))}
+                    <div className="grid grid-cols-4 gap-4 h-full">
+                        {LANES.map(lane => {
+                            const laneOrders = orders.filter(o => o.status === lane.id);
+
+                            return (
+                                <div key={lane.id} className="flex flex-col h-full bg-neutral-900/50 rounded-lg border border-gray-800">
+                                    {/* Lane Header */}
+                                    <div className={`p-3 border-b-2 ${lane.color} bg-neutral-900 flex justify-between items-center sticky top-0`}>
+                                        <h2 className="font-bold uppercase tracking-wider text-sm text-gray-300">{lane.label}</h2>
+                                        <span className="bg-gray-800 text-gray-400 text-xs px-2 py-0.5 rounded-full font-mono">
+                                            {laneOrders.length}
+                                        </span>
+                                    </div>
+
+                                    {/* Lane Content */}
+                                    <div className="flex-1 overflow-y-auto p-2 space-y-3">
+                                        {laneOrders.length === 0 && (
+                                            <div className="text-center text-gray-600 italic text-sm mt-10">Empty</div>
+                                        )}
+                                        {laneOrders.map(order => (
+                                            <KitchenTicket
+                                                key={order.id}
+                                                order={order}
+                                                onStatusChange={handleStatusChange}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </main>

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useCart } from '../../context/CartContext';
-import { Loader2, CheckCircle2, ChefHat, X } from 'lucide-react';
+import { Loader2, CheckCircle2, ChefHat, X, ListStart } from 'lucide-react';
 
 interface OrderStatus {
     id: string;
     ticket_number: number;
-    status: 'PENDING' | 'PREPARING' | 'READY' | 'COMPLETED';
+    status: 'PENDING' | 'QUEUED' | 'PREPARING' | 'READY' | 'COMPLETED';
 }
 
 export const OrderStatusBanner = () => {
@@ -58,7 +58,16 @@ export const OrderStatusBanner = () => {
                     desc: 'Waiting for kitchen confirmation...',
                     icon: <Loader2 className="animate-spin" />,
                     bg: 'bg-blue-600',
-                    progress: 'w-1/4'
+                    progress: 'w-1/12'
+                };
+            // NEW CASE ADDED HERE
+            case 'QUEUED':
+                return {
+                    label: 'In Queue',
+                    desc: 'Your order is confirmed and waiting to be prepared.',
+                    icon: <ListStart />,
+                    bg: 'bg-indigo-600',
+                    progress: 'w-1/3'
                 };
             case 'PREPARING':
                 return {
@@ -66,7 +75,7 @@ export const OrderStatusBanner = () => {
                     desc: 'Chef is working on your food.',
                     icon: <ChefHat className="animate-pulse" />,
                     bg: 'bg-orange-500',
-                    progress: 'w-3/4'
+                    progress: 'w-2/3'
                 };
             case 'READY':
                 return {
@@ -76,8 +85,23 @@ export const OrderStatusBanner = () => {
                     bg: 'bg-green-600',
                     progress: 'w-full'
                 };
+            case 'COMPLETED':
+                return {
+                    label: 'Completed',
+                    desc: 'Thank you for dining with us!',
+                    icon: <CheckCircle2 />,
+                    bg: 'bg-gray-600',
+                    progress: 'w-full'
+                };
             default:
-                return { label: 'Completed', icon: <CheckCircle2 />, bg: 'bg-gray-600', progress: 'w-full' };
+                // Fallback for truly unknown statuses
+                return {
+                    label: 'Processing',
+                    desc: 'Update pending...',
+                    icon: <Loader2 />,
+                    bg: 'bg-gray-600',
+                    progress: 'w-full'
+                };
         }
     };
 

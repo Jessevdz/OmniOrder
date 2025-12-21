@@ -83,7 +83,7 @@ class OrderDetail(BaseModel):
 
 
 class OrderStatusUpdate(BaseModel):
-    status: Literal["PENDING", "PREPARING", "READY", "COMPLETED"]
+    status: Literal["PENDING", "QUEUED", "PREPARING", "READY", "COMPLETED"]
 
 
 # --- Helpers ---
@@ -145,14 +145,14 @@ def get_store_menu(request: Request, db: Session = Depends(get_db)):
 def get_active_orders(request: Request, db: Session = Depends(get_db)):
     """
     Fetch active orders for the KDS (Persistence).
-    Only returns PENDING or PREPARING orders.
+    UPDATED: Returns PENDING, QUEUED, PREPARING, and READY orders.
     """
     tenant = get_tenant_by_host(request, db)
     db.execute(text(f"SET search_path TO {tenant.schema_name}, public"))
 
     orders = (
         db.query(Order)
-        .filter(Order.status.in_(["PENDING", "PREPARING"]))
+        .filter(Order.status.in_(["PENDING", "QUEUED", "PREPARING", "READY"]))
         .order_by(Order.created_at.asc())
         .all()
     )
