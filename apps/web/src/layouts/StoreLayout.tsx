@@ -25,8 +25,13 @@ export const StoreLayout = () => {
         </div>
     );
 
+    // Pass the preset ID explicitly
+    // In MVP DB, 'preset' might be missing, so we fallback safely
+    // Assuming config.theme_config might look like { preset: 'fresh-market', ... }
+    const themePreset = (config as any).preset || 'mono-luxe';
+
     // Theme Injection Logic
-    const themeStyles = applyTheme('mono-luxe', {
+    const themeStyles = applyTheme(themePreset, {
         primary_color: config.primary_color,
         font_family: config.font_family,
     });

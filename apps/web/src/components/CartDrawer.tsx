@@ -1,4 +1,5 @@
 import { useCart } from '../context/CartContext';
+import { BrandButton } from './common/BrandButton';
 import { X, ShoppingBag, Trash2 } from 'lucide-react';
 
 export function CartDrawer() {
@@ -102,12 +103,13 @@ export function CartDrawer() {
                             <span>Total</span>
                             <span>${(cartTotal / 100).toFixed(2)}</span>
                         </div>
-                        <button
+                        <BrandButton
+                            fullWidth
+                            size="lg"
                             onClick={handleCheckout}
-                            className="w-full bg-primary text-primary-fg py-3 rounded-lg font-bold text-lg hover:brightness-110 transition shadow-lg"
                         >
                             Checkout
-                        </button>
+                        </BrandButton>
                     </div>
                 )}
             </div>

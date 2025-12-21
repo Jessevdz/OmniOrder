@@ -27,8 +27,21 @@ export default {
             fontFamily: {
                 heading: ["var(--font-heading)", "sans-serif"],
                 body: ["var(--font-body)", "sans-serif"],
+            },
+            fontWeight: {
+                brand: "var(--font-heading-weight)",
+            },
+            backdropBlur: {
+                brand: "var(--glass-blur)",
             }
         },
     },
-    plugins: [],
+    plugins: [
+        // Custom plugin to handle text-transform since it's not a standard scale in TW
+        function ({ addUtilities }) {
+            addUtilities({
+                '.case-brand': { 'text-transform': 'var(--font-heading-case)' },
+            })
+        }
+    ],
 }
