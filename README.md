@@ -51,10 +51,10 @@ Once the stack is up and the script has passed:
 
 | Interface | URL | Description |
 | --- | --- | --- |
-| **Pizza Hut Store** | [http://pizza.localhost](https://www.google.com/search?q=http://pizza.localhost) | Public customer storefront (Red Theme) |
-| **Burger King Store** | [http://burger.localhost](https://www.google.com/search?q=http://burger.localhost) | Public customer storefront (Blue Theme) |
-| **Pizza Hut Kitchen** | [http://pizza.localhost/kitchen](https://www.google.com/search?q=http://pizza.localhost/kitchen) | KDS for kitchen staff (Live WebSockets) |
-| **API Docs** | [http://localhost:8000/docs](https://www.google.com/search?q=http://localhost:8000/docs) | Swagger UI |
+| **Pizza Hut Store** | http://pizza.localhost | Public customer storefront (Red Theme) |
+| **Burger King Store** | http://burger.localhost | Public customer storefront (Blue Theme) |
+| **Pizza Hut Kitchen** | http://pizza.localhost/kitchen| KDS for kitchen staff (Live WebSockets) |
+| **API Docs** | http://localhost:8000/docs| Swagger UI |
 
 ---
 
