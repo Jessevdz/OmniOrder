@@ -7,9 +7,26 @@ export default {
     theme: {
         extend: {
             colors: {
-                // The magic happens here. Tailwind uses the CSS variable injected by React.
-                primary: "var(--primary)",
-                "primary-fg": "var(--primary-fg)",
+                primary: "var(--color-primary)",
+                "primary-fg": "var(--color-primary-contrast)",
+                secondary: "var(--color-secondary)",
+                surface: "var(--color-bg-surface)",
+                app: "var(--color-bg-app)",
+                "text-main": "var(--color-text-main)",
+                "text-muted": "var(--color-text-muted)",
+                border: "var(--color-border)",
+            },
+            borderRadius: {
+                sm: "var(--radius-sm)",
+                md: "var(--radius-md)",
+                lg: "var(--radius-lg)",
+            },
+            boxShadow: {
+                depth: "var(--shadow-depth)",
+            },
+            fontFamily: {
+                heading: ["var(--font-heading)", "sans-serif"],
+                body: ["var(--font-body)", "sans-serif"],
             }
         },
     },

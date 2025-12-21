@@ -1,17 +1,41 @@
 @import "tailwindcss";
 
 :root {
-    /* Default Fallback (Black) */
-    --primary: #000000;
-    --primary-fg: #ffffff;
-    background-color: #f3f4f6;
-    /* Gray-100 */
+    /* Default Theme (Fallback: Mono Luxe) */
+    --color-primary: #000000;
+    --color-primary-contrast: #FFFFFF;
+    --color-secondary: #6B7280;
+
+    --color-bg-app: #F5F5F5;
+    --color-bg-surface: #FFFFFF;
+
+    --color-text-main: #111111;
+    --color-text-muted: #6B7280;
+    --color-border: #E5E5E5;
+
+    --radius-sm: 0px;
+    --radius-md: 0px;
+    --radius-lg: 0px;
+
+    --shadow-depth: none;
+
+    --font-heading: 'Inter', sans-serif;
+    --font-body: 'Inter', sans-serif;
 }
 
-@theme {
-    /* If you strictly migrate to v4 CSS-first configuration, 
-     you would define theme extensions here. 
-     For now, your tailwind.config.js will still be respected 
-     by the @tailwindcss/postcss plugin.
-  */
+/* Base styles using tokens */
+body {
+    background-color: var(--color-bg-app);
+    color: var(--color-text-main);
+    font-family: var(--font-body);
+    transition: background-color 0.3s, color 0.3s;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: var(--font-heading);
 }
