@@ -14,30 +14,35 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({ categories, activeCate
     const scrollToCategory = (id: string) => {
         const element = document.getElementById(`cat-${id}`);
         if (element) {
-            // Offset for the sticky header height
-            const y = element.getBoundingClientRect().top + window.scrollY - 140;
+            // Offset for the sticky header height (approx 80px for nav + buffer)
+            const y = element.getBoundingClientRect().top + window.scrollY - 100;
             window.scrollTo({ top: y, behavior: 'smooth' });
         }
     };
 
     return (
-        <div className="sticky top-0 z-30 bg-surface border-b border-border shadow-sm">
-            <nav className="max-w-screen-lg mx-auto flex overflow-x-auto whitespace-nowrap hide-scrollbar px-4 py-3 gap-2">
+        <div className="sticky top-0 z-30 bg-surface/85 backdrop-blur-md border-b border-border/50 transition-all duration-300 supports-[backdrop-filter]:bg-surface/60">
+            <nav className="max-w-screen-lg mx-auto flex overflow-x-auto whitespace-nowrap hide-scrollbar px-4 py-4 gap-3 items-center">
                 {categories.map((cat) => (
                     <button
                         key={cat.id}
                         onClick={() => scrollToCategory(cat.id)}
                         className={`
-                            px-4 py-2 rounded-full text-sm font-medium transition-colors
+                            px-5 py-2 rounded-full text-sm font-bold tracking-wide transition-all duration-200 active:scale-95 border
                             ${activeCategory === cat.id
-                                ? 'bg-primary text-primary-fg shadow-md'
-                                : 'bg-app text-text-muted hover:bg-gray-200'}
+                                ? 'bg-primary text-primary-fg border-primary shadow-md shadow-primary/20 scale-105'
+                                : 'bg-transparent text-text-muted border-transparent hover:bg-gray-100 hover:text-text-main'}
                         `}
                     >
                         {cat.name}
                     </button>
                 ))}
+                {/* Spacer to ensure the last item isn't flush with the edge */}
+                <div className="w-4 shrink-0" />
             </nav>
+
+            {/* Mobile Scroll Indicator: Gradient Fade on the right */}
+            <div className="absolute right-0 top-0 h-full w-12 bg-gradient-to-l from-surface to-transparent pointer-events-none md:hidden" />
         </div>
     );
 };
