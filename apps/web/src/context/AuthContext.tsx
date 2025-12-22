@@ -4,7 +4,7 @@ import { AuthProvider as OidcProvider, useAuth as useOidcAuth, AuthProviderProps
 const oidcConfig: AuthProviderProps = {
     // Points to the Authentik Application
     authority: "http://auth.localhost/application/o/omniorder/",
-    client_id: "omniorder-web",
+    client_id: "ngOT1tzQz7AzBFnLZMA0hAAlZB6wP3Yzr2bX3YLM",
     // Upon login, redirect to the dashboard
     redirect_uri: window.location.origin + "/admin/dashboard",
     // Clean up the URL after the code exchange
