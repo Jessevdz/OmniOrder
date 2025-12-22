@@ -1,20 +1,22 @@
 import requests
-import json
 import sys
-import random
 import time
 
-# Configuration
-API_URL = "http://localhost:8000/api/v1"
+# --- Configuration ---
+# The gateway to the API (Nginx or direct)
+BASE_URL = "http://localhost:8000/api/v1"
 
-# Define the tenants we want to seed
+# Domain Configs
+ADMIN_HOST = "admin.omniorder.localhost"
+
+# Tenants to Create
 SEEDS = [
     {
         "name": "Pizza Hut",
         "domain": "pizza.localhost",
         "primary_color": "#e11d48",  # Red
         "font_family": "Oswald",
-        "seed_data": True,
+        "seed_data": True,  # This tells the API to create default Burgers/Fries
     },
     {
         "name": "Burger King",
@@ -25,7 +27,7 @@ SEEDS = [
     },
 ]
 
-# Define Modifiers to attach to specific items
+# Modifiers to attach to the default seeded items
 MODIFIER_KV = {
     "The OmniBurger": [
         {
@@ -34,7 +36,6 @@ MODIFIER_KV = {
             "max_selection": 1,
             "options": [
                 {"name": "Rare", "price_adjustment": 0},
-                {"name": "Medium Rare", "price_adjustment": 0},
                 {"name": "Medium", "price_adjustment": 0},
                 {"name": "Well Done", "price_adjustment": 0},
             ],
@@ -42,11 +43,10 @@ MODIFIER_KV = {
         {
             "name": "Add-ons",
             "min_selection": 0,
-            "max_selection": 5,
+            "max_selection": 3,
             "options": [
                 {"name": "Extra Cheese", "price_adjustment": 100},
-                {"name": "Bacon Strip", "price_adjustment": 200},
-                {"name": "Caramelized Onions", "price_adjustment": 50},
+                {"name": "Bacon", "price_adjustment": 200},
             ],
         },
     ],
@@ -59,26 +59,16 @@ MODIFIER_KV = {
                 {"name": "Regular", "price_adjustment": 0},
                 {"name": "Large", "price_adjustment": 250},
             ],
-        },
-        {
-            "name": "Dipping Sauce",
-            "min_selection": 0,
-            "max_selection": 2,
-            "options": [
-                {"name": "Garlic Aioli", "price_adjustment": 50},
-                {"name": "Spicy Mayo", "price_adjustment": 50},
-            ],
-        },
+        }
     ],
     "Vanilla Shake": [
         {
             "name": "Toppings",
             "min_selection": 0,
-            "max_selection": 3,
+            "max_selection": 2,
             "options": [
                 {"name": "Whipped Cream", "price_adjustment": 0},
                 {"name": "Cherry", "price_adjustment": 0},
-                {"name": "Chocolate Syrup", "price_adjustment": 50},
             ],
         }
     ],
@@ -90,225 +80,154 @@ def log(msg, type="info"):
     print(f"{icons.get(type, '')} {msg}")
 
 
-def get_admin_token(domain):
-    """Log in as the tenant admin to perform write operations."""
+def get_token_from_user():
+    print("\n🔐 AUTHENTICATION REQUIRED")
+    print("---------------------------------------------------------")
+    print("Since we now use OIDC (Authentik), this script cannot auto-login.")
+    print("1. Go to http://admin.omniorder.localhost/admin/login")
+    print("2. Login via Authentik with your Super Admin user.")
+    print("3. Open Developer Tools (F12) -> Network Tab.")
+    print(
+        "4. Refresh or make a request. Look for the 'Authorization: Bearer <token>' header."
+    )
+    print("---------------------------------------------------------")
+    token = input("Paste your Access Token (starts with ey...): ").strip()
+
+    if not token:
+        log("Token required to proceed.", "error")
+        sys.exit(1)
+
+    # Simple heuristic check
+    if not token.startswith("ey"):
+        log("That doesn't look like a JWT. It should start with 'ey'.", "warn")
+        confirm = input("Try anyway? (y/n): ")
+        if confirm.lower() != "y":
+            sys.exit(1)
+
+    return token
+
+
+def provision_tenant(token, payload):
+    """
+    Calls /sys/provision on the ADMIN host.
+    """
+    url = f"{BASE_URL}/sys/provision"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "Host": ADMIN_HOST,  # Critical: Identifies request as Super Admin context
+    }
+
+    log(f"Provisioning {payload['name']} ({payload['domain']})...")
+
     try:
-        headers = {"Host": domain}
-        payload = {"username": f"admin@{domain}", "password": "password"}
-        res = requests.post(f"{API_URL}/auth/login", data=payload, headers=headers)
+        res = requests.post(url, json=payload, headers=headers)
         if res.status_code == 200:
-            return res.json()["access_token"]
-        return None
-    except Exception:
-        return None
-
-
-def provision_tenant(payload):
-    """Call the API to create the schema, tables, and default data."""
-    log(f"Provisioning Tenant: {payload['name']}...", "info")
-
-    try:
-        res = requests.post(f"{API_URL}/sys/provision", json=payload)
-
-        if res.status_code == 200:
-            data = res.json()
-            log(f"Created Schema: {data['schema_name']}", "success")
+            log(f"Tenant Created! Schema: {res.json()['schema_name']}", "success")
             return True
         elif res.status_code == 400:
-            log(
-                f"Tenant '{payload['name']}' already exists. Skipping provision.",
-                "warn",
-            )
-            # If it exists, we assume we can still try to seed modifiers
+            log("Tenant already exists. Skipping provision.", "warn")
             return True
+        elif res.status_code == 401:
+            log("Unauthorized. Token invalid or expired.", "error")
+            sys.exit(1)
+        elif res.status_code == 403:
+            log("Forbidden. Your user is not in SUPER_ADMINS list.", "error")
+            sys.exit(1)
         else:
-            log(f"Provision failed: {res.text}", "error")
+            log(f"Provision Error: {res.text}", "error")
             return False
     except Exception as e:
-        log(f"Connection failed: {e}", "error")
+        log(f"Connection Error: {e}", "error")
         return False
 
 
-def seed_modifiers(tenant):
+def seed_modifiers(token, tenant):
     """
-    1. Login as Admin.
-    2. Fetch Items.
-    3. Add Modifier Groups/Options based on MODIFIER_KV.
+    Switch context to the Tenant Domain and add modifiers.
     """
     domain = tenant["domain"]
-    token = get_admin_token(domain)
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Host": domain,  # Critical: Target the specific tenant schema
+    }
 
-    if not token:
-        log(f"Could not login as admin@{domain} to seed modifiers.", "error")
-        return
+    log(f"Seeding modifiers for {domain}...", "info")
 
-    headers = {"Host": domain, "Authorization": f"Bearer {token}"}
-
-    # 1. Fetch Items to find IDs
+    # 1. Fetch Items to find UUIDs
     try:
-        res = requests.get(f"{API_URL}/admin/items", headers=headers)
+        res = requests.get(f"{BASE_URL}/admin/items", headers=headers)
         if res.status_code != 200:
-            log(f"Failed to fetch items for modifier seeding: {res.text}", "error")
+            log(f"Failed to fetch items: {res.status_code}", "error")
             return
 
         items = res.json()
     except Exception as e:
-        log(f"Failed to fetch items: {e}", "error")
+        log(f"Error fetching items: {e}", "error")
         return
 
     count = 0
+
     for item in items:
+        # If this item has a config in MODIFIER_KV
         if item["name"] in MODIFIER_KV:
-            # Check if already has modifiers (simple check to avoid duplication)
+            # Check if it already has modifiers (simple check)
             if item.get("modifier_groups") and len(item["modifier_groups"]) > 0:
                 continue
 
             configs = MODIFIER_KV[item["name"]]
 
             for group_def in configs:
-                # 2. POST /items/{id}/modifiers
-                payload = {
-                    "name": group_def["name"],
-                    "min_selection": group_def["min_selection"],
-                    "max_selection": group_def["max_selection"],
-                    "options": group_def["options"],
-                }
-
-                m_res = requests.post(
-                    f"{API_URL}/admin/items/{item['id']}/modifiers",
-                    json=payload,
-                    headers=headers,
-                )
-                if m_res.status_code == 200:
-                    count += 1
+                # Create Modifier Group
+                try:
+                    m_res = requests.post(
+                        f"{BASE_URL}/admin/items/{item['id']}/modifiers",
+                        headers=headers,
+                        json=group_def,
+                    )
+                    if m_res.status_code == 200:
+                        count += 1
+                except Exception as e:
+                    log(f"Failed to add modifier: {e}", "error")
 
     if count > 0:
-        log(f"Seeded {count} modifier groups for {domain}.", "success")
+        log(f"Added {count} modifier groups.", "success")
     else:
-        log(f"Modifiers already seeded or no matching items for {domain}.", "info")
-
-
-def generate_traffic(tenant):
-    """Fetch the menu and place random orders with modifiers."""
-    domain = tenant["domain"]
-    headers = {"Host": domain}
-
-    log(f"Generating traffic for {domain}...", "info")
-
-    try:
-        # 1. Fetch Menu
-        res = requests.get(f"{API_URL}/store/menu", headers=headers)
-        if res.status_code != 200:
-            log("Could not fetch menu.", "error")
-            return
-
-        categories = res.json()
-        all_items = []
-        for cat in categories:
-            all_items.extend(cat["items"])
-
-        if not all_items:
-            log("No menu items found. Cannot seed orders.", "error")
-            return
-
-        # 2. Place Random Orders
-        order_count = 5
-
-        for i in range(order_count):
-            # Pick 1-2 random items
-            cart_selection = random.sample(all_items, k=random.randint(1, 2))
-
-            final_items_payload = []
-            total_order_amount = 0
-
-            for item in cart_selection:
-                item_price = item["price"]
-                item_modifiers = []
-
-                # Logic to pick random modifiers if they exist
-                if "modifier_groups" in item:
-                    for group in item["modifier_groups"]:
-                        # If required (min > 0) or random chance, pick an option
-                        if group["min_selection"] > 0 or random.choice([True, False]):
-                            if not group["options"]:
-                                continue
-
-                            # Pick 1 option for now for simplicity
-                            choice = random.choice(group["options"])
-
-                            item_modifiers.append(
-                                {
-                                    "groupId": group["id"],
-                                    "groupName": group["name"],
-                                    "optionId": choice["id"],
-                                    "optionName": choice["name"],
-                                    "price": choice["price_adjustment"],
-                                }
-                            )
-                            item_price += choice["price_adjustment"]
-
-                total_order_amount += item_price
-
-                final_items_payload.append(
-                    {
-                        "id": item["id"],
-                        "qty": 1,
-                        "name": item["name"],
-                        "price": item["price"],
-                        "modifiers": item_modifiers,
-                    }
-                )
-
-            # Construct payload
-            order_payload = {
-                "customer_name": f"Guest {random.randint(10, 99)}",
-                "table_number": str(random.randint(1, 20)),
-                "items": final_items_payload,
-            }
-
-            # Send Order
-            ord_res = requests.post(
-                f"{API_URL}/store/orders", json=order_payload, headers=headers
-            )
-
-            if ord_res.status_code == 201:
-                sys.stdout.write(".")
-                sys.stdout.flush()
-            else:
-                sys.stdout.write("x")
-
-        print("")  # New line
-        log(f"Placed {order_count} orders with modifiers.", "success")
-
-    except Exception as e:
-        log(f"Error generating traffic: {e}", "error")
+        log("No new modifiers needed.", "info")
 
 
 def main():
     print("========================================")
-    print("   OMNIORDER: DATABASE SEEDER v2")
+    print("   OMNIORDER SEEDER (OIDC ENABLED)")
     print("========================================")
 
-    # 1. Provision Tenants
-    for tenant in SEEDS:
-        if provision_tenant(tenant):
-            # 2. Seed Modifiers
-            seed_modifiers(tenant)
+    # 1. Get Token
+    token = get_token_from_user()
 
-            # 3. Generate Data
-            generate_traffic(tenant)
-            print("-" * 40)
+    # 2. Iterate
+    for tenant in SEEDS:
+        print(f"\n--- Processing {tenant['name']} ---")
+
+        # A. Provision (Create Schema & Default Items)
+        success = provision_tenant(token, tenant)
+
+        if success:
+            # B. Seed Modifiers (Enrich Data)
+            seed_modifiers(token, tenant)
 
     print("\n========================================")
     print("   SEEDING COMPLETE")
     print("========================================")
-    print("Login Credentials for all tenants:")
-    for t in SEEDS:
-        print(f"Domain: {t['domain']}")
-        print(f"User:   admin@{t['domain']}")
-        print(f"Pass:   password")
-        print("-" * 20)
+    print("1. Visit http://pizza.localhost")
+    print("2. Visit http://burger.localhost")
+    print("3. Check http://pizza.localhost/kitchen")
 
 
 if __name__ == "__main__":
+    try:
+        requests.get(BASE_URL)
+    except:
+        print("❌ API is not running at http://localhost:8000")
+        sys.exit(1)
+
     main()
