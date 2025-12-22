@@ -1,258 +1,129 @@
-# Authentication & Identity Strategy
+# Authentication & Identity Architecture
 
 ## 1. Executive Summary
 
-Authentication in a multi-tenant SaaS application is significantly more complex than in single-tenant apps. Users must not only be authenticated ("Who are you?") but strictly authorized within a specific context ("Which tenant data can you access?").
+OmniOrder uses **OpenID Connect (OIDC)** via **Authentik** for all identity management. 
 
-Currently, OmniOrder uses a **Custom Local Authentication (MVP)** implementation where user credentials live inside tenant-specific database schemas.
+Instead of managing passwords locally, we federate identity. The backend (FastAPI) is stateless, verifying JWT signatures via JWKS. The frontend (React) uses the Authorization Code flow with PKCE.
 
-**Strategic Direction:** To ensure security, reduce maintenance liability, and enable features like SSO/MFA, we will transition to an **Identity Provider (IdP)** model using **OpenID Connect (OIDC)**.
-
----
-
-## 2. Phase 1: Current Architecture (The MVP)
-
-**Status:** *Active / Implemented*
-
-The current implementation is a "Siloed Auth" pattern. There is no central users table. A user exists *only* within the specific Postgres schema of the restaurant they work for.
-
-### 2.1 The Data Model
-* **Location:** `tenant_{name}.users` table.
-* **Storage:** Passwords are hashed using `bcrypt` (via `passlib`).
-* **Isolation:** A user with email `admin@gmail.com` can exist in `tenant_pizza` and `tenant_burger` with different passwords. They are treated as two completely separate entities.
-
-### 2.2 The Login Flow
-1. **Client:** Sends POST to `/api/v1/auth/login` with `username`, `password`, and the `Host` header.
-2. **Middleware:** Intercepts request, reads `Host`, resolves `schema_name`, and sets the DB search path.
-3. **Verification:** The API queries `SELECT * FROM users` *inside* that schema and verifies the hash.
-4. **Issuance:** The server signs a **JWT** using a shared `KZ_SECRET_KEY`.
+Crucially, **Multi-Tenancy** is enforced via **Group Membership claims** injected into the JWT.
 
 ---
 
-## 3. Phase 2: Target Architecture (OIDC Integration)
+## 2. Architecture Diagram
 
-**Status:** *Recommended Upgrade*
 
-We will offload identity to **Authentik**. It aligns perfectly with our architecture because, like OmniOrder, Authentik natively supports multi-tenancy and can isolate data logically or physically.
-
-### 3.1 Why Authentik?
-
-| Feature | Authentik | Keycloak | Clerk |
-| :--- | :--- | :--- | :--- |
-| **Architecture** | **Python/Django** (Lightweight) | Java/JVM (Heavy) | SaaS (Closed Source) |
-| **Multi-Tenancy** | **Native** (Schema isolation supported) | Realms (Logical isolation) | Organizations |
-| **Cost** | Free / Open Source | Free / Open Source | Paid Scale |
-| **Developer Exp** | Modern UI, easy Docker setup | Complex XML/UI | Excellent SDKs |
-
-**Recommendation:** Use **Authentik** for self-hosted/local capability, maintaining complete data sovereignty.
-
-### 3.2 The New Flow (Standard OIDC)
-
-We stop managing passwords entirely. The API becomes stateless regarding user credentials.
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant Frontend
-    participant Authentik as Authentik (IdP)
-    participant API
-    participant DB
+    participant Frontend as React (Vite)
+    participant Auth as Authentik (IdP)
+    participant API as FastAPI
+    participant DB as Postgres
 
+    Note over User, Auth: Login Phase
     User->>Frontend: Clicks "Login"
-    Frontend->>Authentik: Redirects to auth.omniorder.com
+    Frontend->>Auth: Redirect to auth.localhost
+    User->>Auth: Enters Credentials
+    Auth-->>Frontend: Redirects back with Auth Code
+    Frontend->>Auth: Exchange Code for Access Token (JWT)
     
-    note right of Authentik: Authentik handles context based on<br/>subdomain or selected Application
-    
-    User->>Authentik: Enters Credentials (MFA/SSO)
-    Authentik-->>Frontend: Returns Authorization Code
-    Frontend->>Authentik: Exchanges Code for Access Token (JWT)
-    
-    note over Authentik: JWT Claims:<br/>{"group": ["tenant_pizza_admin"], "email": "..."}
+    Note over Auth: JWT contains custom claim:<br/>"groups": ["Pizza Hut Staff"]
 
-    User->>Frontend: Accesses Dashboard (sends JWT)
-    Frontend->>API: GET /orders (Bearer Token)
+    Note over User, DB: Data Access Phase
+    User->>Frontend: View Dashboard
+    Frontend->>API: GET /api/v1/orders (Bearer JWT)
     
-    API->>API: Validates JWT Signature (Stateless via JWKS)
-    API->>API: Extracts Tenant Context from Claims
-    
-    API->>DB: SET search_path TO {tenant_schema}
+    par Context Resolution
+        API->>API: Extract Host (pizza.localhost) -> tenant_pizza
+        API->>API: Verify JWT Signature (JWKS)
+        API->>API: Verify User belongs to "Pizza Hut Staff"
+    end
+
+    API->>DB: SET search_path TO tenant_pizza
     API->>DB: Execute Query
     DB-->>API: Data
-    API-->>User: Response
 
 ```
 
-### 3.3 Changes Required to Migrate
-
-1. **Infrastructure (`docker-compose.yml`):**
-* Add Authentik Server and Worker containers.
-* Add a Redis container (already present for API, can be shared or separate).
-
-
-2. **API Dependencies (`deps.py`):**
-* Replace local DB lookup with `python-jose` or `pyjwt` validation against Authentik's public key (JWKS).
-* **Crucial:** The `get_current_user` dependency must extract the tenant identifier from the JWT `groups` or custom claims to set the Postgres `search_path`.
-
-
-3. **Provisioning (`sys.py`):**
-* Update `POST /provision`. In addition to creating the Postgres schema, it must now call the Authentik API to:
-* Create a **Group** (e.g., `tenant_pizzahut_admins`).
-* Create a **Scope Mapping** ensuring users in this group get the `schema_name` claim in their token.
-
-
-
-
-
-### 4. Implementation Example (Authentik)
-
-**1. Docker Compose Additions:**
-
-```yaml
-  server:
-    image: ghcr.io/goauthentik/server:2023.10.0
-    command: server
-    environment:
-      AUTHENTIK_REDIS__HOST: redis
-      AUTHENTIK_POSTGRESQL__HOST: db
-      AUTHENTIK_POSTGRESQL__NAME: authentik
-      # ... other config ...
-    depends_on:
-      - db
-      - redis
-
-  worker:
-    image: ghcr.io/goauthentik/server:2023.10.0
-    command: worker
-    environment:
-      AUTHENTIK_REDIS__HOST: redis
-      AUTHENTIK_POSTGRESQL__HOST: db
-      AUTHENTIK_POSTGRESQL__NAME: authentik
-    depends_on:
-      - db
-      - redis
-
-```
-
-**2. Token Validation Logic (Python):**
-
-```python
-from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
-import jwt # PyJWT
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="http://localhost:9000/application/o/token/")
-
-def get_current_user(token: str = Depends(oauth2_scheme)):
-    # 1. Fetch JWKS from Authentik (Cache this!)
-    jwks_client = jwt.PyJWKClient("http://authentik:9000/application/o/omniorder/jwks/")
-    signing_key = jwks_client.get_signing_key_from_jwt(token)
-    
-    try:
-        data = jwt.decode(
-            token,
-            signing_key.key,
-            algorithms=["RS256"],
-            audience="omniorder-api"
-        )
-    except jwt.exceptions.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-    # 2. Extract Tenant Context
-    # We assume Authentik maps the user's group to a claim "tenant_schema"
-    tenant_schema = data.get("tenant_schema") 
-    
-    if not tenant_schema:
-        raise HTTPException(status_code=403, detail="No tenant context found")
-
-    return UserContext(id=data["sub"], schema=tenant_schema)
-```
-
-# Authentik Configuration Guide
-
-This guide details the manual steps required to configure **Authentik** as the Identity Provider (IdP) for the OmniOrder platform.
-
-Since we are running self-hosted Authentik via Docker, these steps must be performed in the Authentik Admin Interface after the stack is booted for the first time.
-
 ---
 
-## 1. Initial Initialization
+## 3. Configuration Guide (Automated)
 
-1. **Boot the Stack:** Ensure `docker-compose up` is running.
-2. **Access the Setup Flow:** Navigate to [http://auth.localhost/if/flow/initial-setup/](http://auth.localhost/if/flow/initial-setup/).
-3. **Set Admin Password:** Define the password for the default `akadmin` user.
-   * *Note: Keep this safe. This is the "God Mode" account for your Identity Infrastructure.*
+We use a Python script to bootstrap the entire Authentik configuration (Provider, App, Groups, Scope Mappings, and Users).
 
----
+### Prerequisites
 
-## 2. Create the Provider
+1. **Boot the Stack:** Ensure `docker-compose up -d` is running.
+2. **Initialize Authentik:** * Go to **[http://auth.localhost/if/flow/initial-setup/](https://www.google.com/search?q=http://auth.localhost/if/flow/initial-setup/)**.
+* Set the password for the default `akadmin` user.
 
-The Provider defines *how* authentication happens (protocol) and *where* tokens are sent.
 
-1. Log in to the **Admin Interface** (click "Admin Interface" in the top right if you land on the User Dashboard).
-2. Go to **Applications** -> **Providers** in the sidebar.
-3. Click **Create**.
-4. Select **OAuth2/OpenID Provider** and click **Next**.
-5. Fill in the form:
-   * **Name:** `OmniOrder Provider`
-   * **Authentication Flow:** `default-authentication-flow` (or explicitly select one).
-   * **Authorization Flow:** `default-provider-authorization-explicit-consent` (this shows the "Allow Access" screen) or `default-provider-authorization-implicit-consent` (skips the prompt, smoother for users).
-   * **Client Type:** `Public` (since we are using a SPA/React frontend).
-   * **Client ID:** `omniorder-web`
-   * **Redirect URIs:**
-     ```text
-     http://.*\.localhost/.*
-     ```
-     * *Critial Note:* Because OmniOrder uses dynamic subdomains (`pizza.localhost`, `burger.localhost`), we cannot list every single URL. We use a **Regular Expression** to allow any subdomain.
-6. Click **Finish**.
 
----
+### Step 1: Generate Admin Token
 
-## 3. Create the Application
+To allow the script to configure Authentik, you need an API Token.
 
-The Application acts as the container for the Provider and defines access policies.
-
-1. Go to **Applications** -> **Applications** in the sidebar.
-2. Click **Create**.
-3. Fill in the form:
-   * **Name:** `OmniOrder`
-   * **Slug:** `omniorder`
-   * **Provider:** Select `OmniOrder Provider` (created in step 2).
+1. Log in to [http://auth.localhost](https://www.google.com/search?q=http://auth.localhost) as `akadmin`.
+2. Go to **Admin Interface** (Top right button).
+3. Navigate to **Directory** > **Token & App Passwords**.
 4. Click **Create**.
+* **Identifier:** `bootstrapper`
+* **User:** `akadmin`
+
+
+5. **Copy the Token Key** (it starts with `ak_...` or similar).
+
+### Step 2: Run the Bootstrap Script
+
+1. Open `scripts/setup_auth.py`.
+2. Paste your token into the `API_TOKEN` variable (format: `"Bearer <token>"`).
+3. Run the script:
+```bash
+# Ensure requests is installed (pip install requests)
+python scripts/setup_auth.py
+
+```
+
+
+
+### Step 3: What the Script Does
+
+The script performs the following idempotent actions via the Authentik API:
+
+1. **Creates Scope Mapping:** Defines a custom scope named `groups` that injects the user's Authentik groups into the JWT.
+2. **Creates Provider:** Sets up the OAuth2 provider with `omniorder-web` Client ID and wildcard redirect URIs for localhost subdomains. It attaches the `groups` scope automatically.
+3. **Creates Application:** Creates the "OmniOrder" app and links it to the Provider.
+4. **Creates Groups:**
+* `Super Admins`
+* `Pizza Hut Staff`
+* `Burger King Staff`
+
+
+5. **Seeds Users:** Creates default users and assigns them to the correct groups.
+
+| User | Password | Group | Access |
+| --- | --- | --- | --- |
+| `jesse_admin` | `password` | Super Admins | `admin.omniorder.localhost` |
+| `pizza_manager` | `password` | Pizza Hut Staff | `pizza.localhost` |
+| `burger_manager` | `password` | Burger King Staff | `burger.localhost` |
 
 ---
 
-## 4. Verification
+## 4. Frontend Integration Details
 
-To ensure the setup is correct, we need to verify the **OpenID Configuration URL** and **JWKS (JSON Web Key Set)** endpoint. The Backend API uses these to validate tokens without needing a shared secret.
+The frontend uses `react-oidc-context`. Configuration is located in `apps/web/src/context/AuthContext.tsx`.
 
-1. Go back to **Applications** -> **Providers**.
-2. Click on `OmniOrder Provider`.
-3. Look for the **Provider Metadata** section.
-4. Verify the **JWKS URL**. It should look like:
-   `http://auth.localhost/application/o/omniorder/jwks/`
+* **Authority:** `http://auth.localhost/application/o/omniorder/`
+* **Client ID:** `omniorder-web`
+* **Redirect URI:** `window.location.origin + ...` (Dynamic based on current subdomain).
 
-*Note for Developers:* Inside the Docker network (Back-channel communication), the API will access this via the internal container name: `http://authentik-server:9000/application/o/omniorder/jwks/`.
+## 5. Backend Enforcement Details
 
----
+The API (`apps/api/app/api/v1/deps.py`) enforces security using the token claims.
 
-## 5. (Advanced) Scope Mapping for Tenants
-
-*Phase 2 Requirement.*
-
-To pass the "Tenant Schema" (e.g., `tenant_pizzahut`) inside the JWT, we will need a Custom Scope.
-
-1. Go to **Customization** -> **Property Mappings**.
-2. Create **Scope Mapping**.
-3. **Name:** `tenant-scope`
-4. **Scope Name:** `tenant`
-5. **Expression:**
-
-   ```python
-   # Logic to determine tenant based on user groups or attributes
-   # For MVP, we might return a list of accessible schemas
-   return {
-       "tenant_schema": request.user.attributes.get("tenant_schema", "public")
-   }
-  ```
-
-6. Go back to the **Provider**, edit it, and add `tenant-scope` to the **Selected Scopes** list.
+1. **JWKS Validation:** It fetches keys from `http://authentik-server:9000/...` (Internal Docker Network) to validate the signature.
+2. **Group Check (Recommended):**
+* If `Host: pizza.localhost`, the token **MUST** contain `Pizza Hut Staff` in the `groups` list.
+* If `Host: admin.omniorder.localhost`, the token **MUST** contain `Super Admins`.
