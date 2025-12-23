@@ -7,6 +7,7 @@ import { CartProvider } from './context/CartContext';
 import { StoreLayout } from './layouts/StoreLayout';
 import { PlatformLayout } from './layouts/PlatformLayout';
 import { TenantLayout } from './layouts/TenantLayout';
+import { DemoLayout } from './layouts/DemoLayout'; // <--- NEW
 
 // Public Store Pages
 import { MenuPage } from './components/store/MenuPage';
@@ -26,6 +27,9 @@ import { TenantSettings } from './pages/tenant/Settings';
 // KDS
 import { KitchenDisplay } from './pages/kitchen/KitchenDisplay';
 
+// Demo Pages
+import { SplitView } from './pages/demo/SplitView'; // <--- NEW
+
 function App() {
     return (
         <AuthProvider>
@@ -34,7 +38,6 @@ function App() {
                     <Routes>
                         {/* -----------------------------------------------------
                             1. PUBLIC STOREFRONT 
-                            (Accessed via pizza.localhost, etc.)
                            ----------------------------------------------------- */}
                         <Route element={<StoreLayout />}>
                             <Route path="/" element={<MenuPage />} />
@@ -42,7 +45,6 @@ function App() {
 
                         {/* -----------------------------------------------------
                             2. KITCHEN DISPLAY SYSTEM 
-                            (Accessed via pizza.localhost/kitchen)
                            ----------------------------------------------------- */}
                         <Route path="/kitchen" element={<KitchenDisplay />} />
 
@@ -53,7 +55,6 @@ function App() {
 
                         {/* -----------------------------------------------------
                             4. SUPER ADMIN / PLATFORM PORTAL 
-                            (Ideally admin.omniorder.localhost/platform)
                            ----------------------------------------------------- */}
                         <Route path="/platform" element={<PlatformLayout />}>
                             <Route index element={<Navigate to="dashboard" replace />} />
@@ -64,7 +65,6 @@ function App() {
 
                         {/* -----------------------------------------------------
                             5. TENANT ADMIN / MANAGER PORTAL 
-                            (Accessed via pizza.localhost/admin)
                            ----------------------------------------------------- */}
                         <Route path="/admin" element={<TenantLayout />}>
                             <Route index element={<Navigate to="dashboard" replace />} />
@@ -72,6 +72,30 @@ function App() {
                             <Route path="menu" element={<MenuBuilder />} />
                             <Route path="staff" element={<div>Staff Management Placeholder</div>} />
                             <Route path="settings" element={<TenantSettings />} />
+                        </Route>
+
+                        {/* -----------------------------------------------------
+                            6. DEMO EXPERIENCE (The "Omni-Shell") 
+                           ----------------------------------------------------- */}
+                        <Route path="/demo" element={<DemoLayout />}>
+                            <Route index element={<Navigate to="split" replace />} />
+                            <Route path="split" element={<SplitView />} />
+
+                            {/* Standard views wrapped in demo layout for fast switching */}
+                            <Route path="store" element={
+                                <div className="h-full w-full bg-white overflow-y-auto">
+                                    <StoreLayout />
+                                    <MenuPage />
+                                </div>
+                            } />
+                            <Route path="kitchen" element={<KitchenDisplay />} />
+
+                            {/* Re-use Tenant Layout logic but force rendering inside our shell */}
+                            <Route path="admin/*" element={
+                                <div className="h-full w-full bg-gray-50 overflow-y-auto">
+                                    <TenantLayout />
+                                </div>
+                            } />
                         </Route>
 
                     </Routes>

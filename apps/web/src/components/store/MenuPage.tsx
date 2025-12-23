@@ -25,7 +25,16 @@ interface Category {
 
 export function MenuPage() {
     // 1. Context & State
-    const { config } = useOutletContext<any>();
+    // Try to get context from Outlet, but don't crash if it's missing (fallback logic handled in SplitView via prop passing if needed, or CartProvider wrapping)
+    const outletCtx = useOutletContext<any>();
+
+    // In SplitView, we manually passed context={{ config }} via Outlet, so this works.
+    // However, if we render <MenuPage /> directly without Outlet (like in the SplitView JSX below the outlet), 
+    // we should rely on a simpler prop or context.
+
+    // For MVP simplicity in SplitView, we are actually rendering the Outlet AND the MenuPage explicitly.
+    // Let's rely on the Outlet context which IS provided in SplitView.
+    const config = outletCtx?.config || { preset: 'mono-luxe', name: 'Loading...' };
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState<string>('');
