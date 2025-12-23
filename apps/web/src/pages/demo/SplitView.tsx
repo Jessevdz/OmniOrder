@@ -1,100 +1,35 @@
-import { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { useState } from 'react';
+import { Outlet, useOutletContext } from 'react-router-dom';
 import { MenuPage } from '../../components/store/MenuPage';
 import { KitchenDisplay } from '../kitchen/KitchenDisplay';
-import { ThemeWidget } from '../../components/demo/ThemeWidget';
 import { WelcomeOverlay } from '../../components/demo/WelcomeOverlay';
-import { useTenantConfig, TenantConfig } from '../../hooks/useTenantConfig';
 import { applyTheme } from '../../utils/theme';
 import { FontLoader } from '../../components/FontLoader';
 import { CartDrawer } from '../../components/CartDrawer';
 import { CartFloatingButton } from '../../components/store/CartFloatingButton';
 import { OrderStatusBanner } from '../../components/store/OrderStatusBanner';
 import { CartProvider } from '../../context/CartContext';
+import { DemoContextType } from '../../layouts/DemoLayout';
 
 export function SplitView() {
-    const { config: initialConfig, loading } = useTenantConfig();
+    // Consume Context from DemoLayout
+    const { config, preset } = useOutletContext<DemoContextType>();
 
-    // State Persistence for Tour
-    // We check sessionStorage immediately to determine initial state
-    const [tourActive, setTourActive] = useState(() => {
-        const seen = sessionStorage.getItem('omni_demo_tour_seen');
-        return !seen;
-    });
-
+    // Tour State
+    const [tourActive, setTourActive] = useState(() => !sessionStorage.getItem('omni_demo_tour_seen'));
     const [tourStep, setTourStep] = useState(0);
-    const [localPreset, setLocalPreset] = useState<string | null>(null);
-    const [demoToken, setDemoToken] = useState<string | null>(null);
 
-    // Handle Tour Completion
     const handleTourComplete = () => {
         setTourActive(false);
         sessionStorage.setItem('omni_demo_tour_seen', 'true');
     };
 
-    useEffect(() => {
-        const authenticateDemo = async () => {
-            try {
-                // 1. Check if we already have a token in session
-                const existing = sessionStorage.getItem('demo_token');
-                if (existing) {
-                    setDemoToken(existing);
-                    return;
-                }
+    if (!config) return <div className="h-screen bg-neutral-950 text-white flex items-center justify-center">Loading Demo...</div>;
 
-                // 2. Perform Magic Login
-                const res = await fetch('/api/v1/sys/demo-login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code: 'OMNI2025' }) // Hardcoded demo code
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    setDemoToken(data.access_token);
-                    sessionStorage.setItem('demo_token', data.access_token);
-                }
-            } catch (e) {
-                console.error("Demo Auth failed", e);
-            }
-        };
-        authenticateDemo();
-    }, []);
-
-    if (loading) return <div className="h-screen bg-neutral-950 text-white flex items-center justify-center">Loading Demo Experience...</div>;
-
-    const activeConfig = {
-        ...initialConfig,
-        preset: localPreset || initialConfig?.preset || 'mono-luxe'
-    } as TenantConfig;
-
-    const themeStyles = applyTheme(activeConfig.preset, {
-        primary_color: activeConfig.primary_color,
-        font_family: activeConfig.font_family,
+    const themeStyles = applyTheme(preset, {
+        primary_color: config.primary_color,
+        font_family: config.font_family,
     });
-
-    const updateTheme = async (presetId: string) => {
-        setLocalPreset(presetId);
-        if (!demoToken) return;
-
-        try {
-            await fetch('/api/v1/admin/settings', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${demoToken}` // Inject Magic Token
-                },
-                body: JSON.stringify({ ...activeConfig, preset: presetId })
-            });
-        } catch (e) {
-            console.warn("Failed to persist theme", e);
-        }
-    };
-
-    // --- SPOTLIGHT LOGIC ---
-    // Step 1: Spotlight Left (Storefront)
-    // Step 2: Spotlight Right (KDS)
-    // We lift the z-index to 110 to pop over the WelcomeOverlay (z-100)
 
     const isLeftSpotlight = tourActive && tourStep === 1;
     const isRightSpotlight = tourActive && tourStep === 2;
@@ -114,7 +49,6 @@ export function SplitView() {
     return (
         <div className="flex h-screen w-full bg-neutral-950 p-2 md:p-4 gap-4 relative">
 
-            {/* Tour Overlay (z-index 100) */}
             {tourActive && (
                 <WelcomeOverlay
                     currentStep={tourStep}
@@ -123,41 +57,33 @@ export function SplitView() {
                 />
             )}
 
-            {/* --- LEFT: The Customer (Storefront) --- */}
+            {/* LEFT: Customer View */}
             <div className={leftPaneClass}>
                 <div className="absolute top-0 left-0 w-full h-8 bg-neutral-100 border-b border-gray-200 z-50 flex items-center justify-center gap-2">
                     <div className="w-16 h-4 bg-black rounded-full" />
                 </div>
 
                 <div style={themeStyles} className="flex-1 overflow-y-auto bg-app text-text-main font-body pt-8 relative scroll-smooth no-scrollbar">
-                    <FontLoader fontFamily={activeConfig.font_family} />
-
+                    <FontLoader fontFamily={config.font_family} />
                     <CartProvider>
-                        <ThemeWidget currentPreset={activeConfig.preset} onPresetChange={updateTheme} />
                         <OrderStatusBanner />
-
-                        {/* Pass activeConfig to the Outlet context for routes that use it */}
-                        <Outlet context={{ config: activeConfig }} />
-
                         <div className="pb-24">
-                            {/* Explicitly pass config prop for the direct render to ensure styling applies */}
-                            <MenuPage config={activeConfig} />
+                            {/* Pass config explicitly to ensure immediate re-render on context change */}
+                            <MenuPage config={config} />
                         </div>
-
                         <CartFloatingButton />
                         <CartDrawer />
                     </CartProvider>
                 </div>
             </div>
 
-            {/* --- RIGHT: The Kitchen (KDS) --- */}
+            {/* RIGHT: Kitchen View */}
             <div className={rightPaneClass}>
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 z-50 opacity-50" />
                 <div className="flex-1 overflow-hidden">
                     <KitchenDisplay />
                 </div>
             </div>
-
         </div>
     );
 }

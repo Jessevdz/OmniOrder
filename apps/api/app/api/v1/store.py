@@ -225,15 +225,16 @@ async def create_store_order(
     Creates an order with SERVER-SIDE price calculation and Daily Ticket #.
     """
     tenant = get_tenant_by_host(request, db)
-    db.execute(text(f"SET search_path TO {tenant.schema_name}, public"))
+
+    # 1. Set Context
+    schema_context_sql = text(f"SET search_path TO {tenant.schema_name}, public")
+    db.execute(schema_context_sql)
 
     # 1. Logic to Calculate Daily Ticket Number
     # Get the start of the current day (UTC)
     today_start = datetime.utcnow().date()
 
     # Find the highest ticket number created today
-    # We use a locking strategy or simple max query.
-    # For MVP, simple max query + 1 is sufficient.
     last_order = (
         db.query(Order.ticket_number)
         .filter(func.date(Order.created_at) == today_start)
@@ -309,6 +310,12 @@ async def create_store_order(
 
     try:
         db.commit()
+
+        # [CRITICAL FIX]
+        # Commit closes the transaction and often resets the session search_path.
+        # We must re-apply the tenant schema before we refresh, otherwise it looks in 'public'.
+        db.execute(schema_context_sql)
+
         db.refresh(new_order)
 
         # Prepare broadcast data including Ticket # and Table
@@ -324,6 +331,7 @@ async def create_store_order(
         }
     except Exception as e:
         db.rollback()
+        print(f"Order Placement Error: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to place order: {e}")
 
     # 5. Broadcast new order

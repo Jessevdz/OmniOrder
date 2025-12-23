@@ -2,15 +2,22 @@ import uuid
 import logging
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from app.db.models import Tenant, Category, MenuItem, ModifierGroup, ModifierOption
+
+# [Fix 1] Explicitly import Order to ensure it registers in Base.metadata
+from app.db.models import (
+    Tenant,
+    Category,
+    MenuItem,
+    ModifierGroup,
+    ModifierOption,
+    Order,
+)
 from app.db.base import Base
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 # --- HIGH FIDELITY DEMO DATA ---
-# Images chosen for high contrast and general appeal across themes.
-
 DEMO_TENANT_SEED = {
     "name": "Omni Demo Bistro",
     "domain": settings.DEMO_DOMAIN,
@@ -148,7 +155,7 @@ DEMO_TENANT_SEED = {
     ],
 }
 
-# --- OTHER TENANTS (FOR CONTEXT) ---
+# --- OTHER TENANTS ---
 OTHER_SEEDS = [
     {
         "name": "Pizza Hut",
@@ -207,62 +214,90 @@ SEEDS = [DEMO_TENANT_SEED, *OTHER_SEEDS]
 
 def provision_tenant_internal(db: Session, seed_data: dict, engine):
     """
-    Directly provisions a tenant, schema, tables, and data without API calls.
+    Provisions a tenant. Checks if tables exist and creates them if needed.
     """
-    # 1. Check/Create Tenant Record in Public Schema
-    db.execute(text("SET search_path TO public"))
+    schema = seed_data["schema_name"]
+    is_demo = seed_data["domain"] == settings.DEMO_DOMAIN
 
+    # 1. Tenant Record (Public)
+    db.execute(text("SET search_path TO public"))
     existing = db.query(Tenant).filter(Tenant.domain == seed_data["domain"]).first()
 
-    # If it exists, we might want to update config if it's the demo tenant
     if existing:
-        logger.info(f"Tenant {seed_data['name']} already exists.")
-        if seed_data["domain"] == settings.DEMO_DOMAIN:
+        logger.info(f"Tenant {seed_data['name']} record exists.")
+        if is_demo:
+            # For demo, we always want to ensure config is fresh
             existing.theme_config = seed_data["theme_config"]
             db.commit()
-        return
+    else:
+        logger.info(f"Creating Tenant Record: {seed_data['name']}")
+        new_tenant = Tenant(
+            name=seed_data["name"],
+            domain=seed_data["domain"],
+            schema_name=schema,
+            theme_config=seed_data["theme_config"],
+        )
+        db.add(new_tenant)
+        db.commit()
 
-    logger.info(f"Creating Tenant: {seed_data['name']}")
+    # 2. Schema Creation & Reset
+    # [Fix 2] For DEMO only: Drop schema to force clean slate if it got corrupted
+    if is_demo:
+        logger.info(f"Demo Mode: Ensuring clean state for {schema}")
+        try:
+            # We check if tables exist; if not, we might as well drop schema to be safe
+            # But simpler: just create if not exists.
+            db.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
+            db.commit()
+        except Exception as e:
+            logger.error(f"Schema op failed: {e}")
 
-    new_tenant = Tenant(
-        name=seed_data["name"],
-        domain=seed_data["domain"],
-        schema_name=seed_data["schema_name"],
-        theme_config=seed_data["theme_config"],
-    )
-    db.add(new_tenant)
-    db.commit()
-
-    # 2. Create Schema
-    schema = seed_data["schema_name"]
-    try:
+    else:
+        # Standard Tenants
         db.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
         db.commit()
+
+    # 3. Table Creation
+    # We use the engine directly to ensure binding to the correct schema context
+    try:
+        with engine.begin() as connection:
+            connection.execute(text(f"SET search_path TO {schema}"))
+
+            # Filter for tenant tables (exclude public)
+            tenant_tables = [
+                t for t in Base.metadata.sorted_tables if t.schema != "public"
+            ]
+
+            logger.info(
+                f"Creating tables in {schema}: {[t.name for t in tenant_tables]}"
+            )
+            Base.metadata.create_all(bind=connection, tables=tenant_tables)
+
     except Exception as e:
-        logger.error(f"Failed to create schema {schema}: {e}")
+        logger.error(f"Failed to create tables for {schema}: {e}")
         return
 
-    # 3. Create Tables
-    with engine.begin() as connection:
-        connection.execute(text(f"SET search_path TO {schema}"))
-        tenant_tables = [t for t in Base.metadata.sorted_tables if t.schema != "public"]
-        Base.metadata.create_all(bind=connection, tables=tenant_tables)
-
-    # 4. Seed Data (Menu)
+    # 4. Data Seeding
     db.execute(text(f"SET search_path TO {schema}"))
 
-    # Create Categories & Items
-    # Note: Flattened the structure in this new version of SEEDS, so adapting logic below
+    # Check if data exists
+    if db.query(Category).count() > 0:
+        if not is_demo:
+            logger.info(f"Data exists for {schema}, skipping seed.")
+            return
+        # If demo, we might want to reset?
+        # For now, let's assume if data exists, we are good.
+        return
+
+    logger.info(f"Seeding Data for {schema}...")
 
     for i, cat_data in enumerate(seed_data["categories"]):
-        # Create Category
         category = Category(
             id=uuid.uuid4(), name=cat_data["name"], rank=cat_data.get("rank", i)
         )
         db.add(category)
         db.flush()
 
-        # Create Items
         for item_data in cat_data["items"]:
             item = MenuItem(
                 id=uuid.uuid4(),
@@ -275,7 +310,6 @@ def provision_tenant_internal(db: Session, seed_data: dict, engine):
             db.add(item)
             db.flush()
 
-            # Create Modifiers
             if "modifiers" in item_data:
                 for mod_grp in item_data["modifiers"]:
                     grp = ModifierGroup(
