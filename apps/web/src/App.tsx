@@ -7,7 +7,7 @@ import { CartProvider } from './context/CartContext';
 import { StoreLayout } from './layouts/StoreLayout';
 import { PlatformLayout } from './layouts/PlatformLayout';
 import { TenantLayout } from './layouts/TenantLayout';
-import { DemoLayout } from './layouts/DemoLayout'; // <--- NEW
+import { DemoLayout } from './layouts/DemoLayout';
 
 // Public Store Pages
 import { MenuPage } from './components/store/MenuPage';
@@ -28,7 +28,7 @@ import { TenantSettings } from './pages/tenant/Settings';
 import { KitchenDisplay } from './pages/kitchen/KitchenDisplay';
 
 // Demo Pages
-import { SplitView } from './pages/demo/SplitView'; // <--- NEW
+import { SplitView } from './pages/demo/SplitView';
 
 function App() {
     return (
@@ -81,13 +81,14 @@ function App() {
                             <Route index element={<Navigate to="split" replace />} />
                             <Route path="split" element={<SplitView />} />
 
-                            {/* Standard views wrapped in demo layout for fast switching */}
                             <Route path="store" element={
                                 <div className="h-full w-full bg-white overflow-y-auto">
                                     <StoreLayout />
-                                    <MenuPage />
                                 </div>
-                            } />
+                            }>
+                                <Route index element={<MenuPage />} />
+                            </Route>
+
                             <Route path="kitchen" element={<KitchenDisplay />} />
 
                             {/* Re-use Tenant Layout logic but force rendering inside our shell */}
