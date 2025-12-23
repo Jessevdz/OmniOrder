@@ -92,11 +92,16 @@ function App() {
                             <Route path="kitchen" element={<KitchenDisplay />} />
 
                             {/* Re-use Tenant Layout logic but force rendering inside our shell */}
-                            <Route path="admin/*" element={
+                            <Route path="admin" element={
                                 <div className="h-full w-full bg-gray-50 overflow-y-auto">
                                     <TenantLayout />
                                 </div>
-                            } />
+                            }>
+                                <Route index element={<Navigate to="dashboard" replace />} />
+                                <Route path="dashboard" element={<TenantDashboard />} />
+                                <Route path="menu" element={<MenuBuilder />} />
+                                <Route path="settings" element={<TenantSettings />} />
+                            </Route>
                         </Route>
 
                     </Routes>

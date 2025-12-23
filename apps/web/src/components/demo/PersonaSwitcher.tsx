@@ -17,7 +17,7 @@ export const PersonaSwitcher: React.FC<PersonaSwitcherProps> = ({ currentPreset,
         { id: 'split', label: 'Omni View', path: '/demo/split', icon: SplitSquareVertical },
         { id: 'store', label: 'Storefront', path: '/demo/store', icon: Store },
         { id: 'kds', label: 'Kitchen', path: '/demo/kitchen', icon: ChefHat },
-        { id: 'admin', label: 'Manager', path: '/demo/admin', icon: Settings },
+        { id: 'admin', label: 'Manager', path: '/demo/admin/dashboard', icon: Settings },
     ];
 
     const handleReset = async () => {
