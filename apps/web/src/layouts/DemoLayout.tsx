@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Outlet, Navigate, useLocation } from 'react-router-dom';
+import { Outlet, Navigate } from 'react-router-dom';
 import { PersonaSwitcher } from '../components/demo/PersonaSwitcher';
 import { useTenantConfig, TenantConfig } from '../hooks/useTenantConfig';
+import { Loader2 } from 'lucide-react';
 
-// Define the Context Type for consumers (SplitView, etc)
 export interface DemoContextType {
     config: TenantConfig | null;
     preset: string;
@@ -13,14 +13,12 @@ export interface DemoContextType {
 export const DemoLayout = () => {
     // 1. Environment Check
     const isDemoDomain = window.location.hostname.includes('demo') || window.location.hostname.includes('localhost');
-    const { config: initialConfig, loading: configLoading } = useTenantConfig();
+    const { config: initialConfig } = useTenantConfig();
 
     // 2. State
     const [demoToken, setDemoToken] = useState<string | null>(null);
-    // Lifted Preset State (Defaults to 'mono-luxe' until config loads)
     const [activePreset, setActivePreset] = useState<string>('mono-luxe');
 
-    // Sync local state with fetched config once loaded
     useEffect(() => {
         if (initialConfig?.preset) {
             setActivePreset(initialConfig.preset);
@@ -31,12 +29,14 @@ export const DemoLayout = () => {
     useEffect(() => {
         const authenticateDemo = async () => {
             try {
+                // Check session storage first
                 const existing = sessionStorage.getItem('demo_token');
                 if (existing) {
                     setDemoToken(existing);
                     return;
                 }
 
+                // Login if no token
                 const res = await fetch('/api/v1/sys/demo-login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -55,15 +55,11 @@ export const DemoLayout = () => {
         authenticateDemo();
     }, []);
 
-    // 4. Action: Update Theme
     const handlePresetChange = async (newPreset: string) => {
-        // Optimistic Update
         setActivePreset(newPreset);
-
         if (!demoToken || !initialConfig) return;
 
         try {
-            // Persist to Backend
             await fetch('/api/v1/admin/settings', {
                 method: 'PUT',
                 headers: {
@@ -73,7 +69,6 @@ export const DemoLayout = () => {
                 body: JSON.stringify({
                     ...initialConfig,
                     preset: newPreset,
-                    // Reset primary color to default of the preset if switching
                     primary_color: getPresetDefaultColor(newPreset)
                 })
             });
@@ -84,7 +79,16 @@ export const DemoLayout = () => {
 
     if (!isDemoDomain) return <Navigate to="/" replace />;
 
-    // Context object to pass to Outlet
+    // [CRITICAL FIX] Prevent child routes (MenuBuilder) from loading before token is ready
+    if (!demoToken) {
+        return (
+            <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center text-white gap-4">
+                <Loader2 className="animate-spin text-blue-500" size={48} />
+                <p className="font-mono text-sm opacity-80">Initializing Demo Environment...</p>
+            </div>
+        );
+    }
+
     const demoContext: DemoContextType = {
         config: initialConfig ? { ...initialConfig, preset: activePreset } : null,
         preset: activePreset,
@@ -94,7 +98,6 @@ export const DemoLayout = () => {
     return (
         <div className="min-h-screen bg-neutral-950 font-sans selection:bg-blue-500 selection:text-white">
             <main className="relative h-screen w-screen overflow-hidden">
-                {/* Pass context to sub-routes (SplitView, Store, etc) */}
                 <Outlet context={demoContext} />
             </main>
 
@@ -106,7 +109,6 @@ export const DemoLayout = () => {
     );
 };
 
-// Helper to reset color when switching themes
 function getPresetDefaultColor(preset: string): string {
     switch (preset) {
         case 'fresh-market': return '#16A34A';

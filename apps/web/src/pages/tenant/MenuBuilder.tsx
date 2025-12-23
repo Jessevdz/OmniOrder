@@ -20,12 +20,13 @@ interface MenuItem {
 }
 
 export function MenuBuilder() {
-    const { token } = useAuth();
+    const { token, isLoading: authLoading } = useAuth();
 
     // Data State
     const [categories, setCategories] = useState<Category[]>([]);
     const [items, setItems] = useState<MenuItem[]>([]);
-    const [loading, setLoading] = useState(true);
+
+    const [dataLoading, setDataLoading] = useState(true);
 
     // Form State
     const [activeTab, setActiveTab] = useState<'items' | 'categories'>('items');
@@ -45,22 +46,51 @@ export function MenuBuilder() {
 
     // Initial Fetch
     const fetchData = async () => {
+        if (!token) {
+            // If no token but auth is done loading, we stop data loading (user is just not logged in/valid)
+            if (!authLoading) setDataLoading(false);
+            return;
+        }
+
         const headers = { 'Authorization': `Bearer ${token}` };
         try {
             const [catRes, itemRes] = await Promise.all([
                 fetch('/api/v1/admin/categories', { headers }),
                 fetch('/api/v1/admin/items', { headers })
             ]);
-            setCategories(await catRes.json());
-            setItems(await itemRes.json());
+
+            if (!catRes.ok || !itemRes.ok) {
+                console.error("API Error", catRes.status, itemRes.status);
+                setCategories([]);
+                setItems([]);
+                return;
+            }
+
+            const catData = await catRes.json();
+            const itemData = await itemRes.json();
+
+            setCategories(Array.isArray(catData) ? catData : []);
+            setItems(Array.isArray(itemData) ? itemData : []);
+
         } catch (error) {
             console.error("Failed to fetch menu data", error);
+            setCategories([]);
+            setItems([]);
         } finally {
-            setLoading(false);
+            setDataLoading(false);
         }
     };
 
-    useEffect(() => { fetchData(); }, []);
+    useEffect(() => {
+        if (!authLoading) {
+            if (token) {
+                fetchData();
+            } else {
+                // If auth finished but no token, stop loading spinner so we don't hang
+                setDataLoading(false);
+            }
+        }
+    }, [token, authLoading]);
 
     // --- GENERIC API HELPERS ---
     const apiCall = async (endpoint: string, method: string, body?: any) => {
@@ -87,9 +117,7 @@ export function MenuBuilder() {
     const handleCategorySubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            // Determine Rank
             const nextRank = categories.length > 0 ? Math.max(...categories.map(c => c.rank)) + 1 : 0;
-
             await apiCall('/categories', 'POST', { name: catForm.name, rank: nextRank });
             setCatForm({ id: '', name: '' });
             fetchData();
@@ -97,12 +125,10 @@ export function MenuBuilder() {
     };
 
     const handleDeleteCategory = async (id: string) => {
-        // Prevent deleting the last category in demo mode
         if (categories.length <= 1) {
             alert("Demo Safety Guard: You cannot delete the last category. Please add another category before removing this one.");
             return;
         }
-
         if (!confirm("Delete this category? All items inside it will also be deleted.")) return;
         try {
             await apiCall(`/categories/${id}`, 'DELETE');
@@ -117,11 +143,9 @@ export function MenuBuilder() {
 
         [newCats[index], newCats[swapIndex]] = [newCats[swapIndex], newCats[index]];
 
-        // Optimistic Update
         const reordered = newCats.map((cat, idx) => ({ ...cat, rank: idx }));
         setCategories(reordered);
 
-        // API Sync
         const payload = reordered.map(c => ({ id: c.id, rank: c.rank }));
         await apiCall('/categories/reorder', 'PUT', payload);
     };
@@ -136,8 +160,7 @@ export function MenuBuilder() {
     const handleEditItemClick = (item: MenuItem) => {
         setItemForm(item);
         setFormMode('edit');
-        setActiveTab('items'); // Ensure tab is visible
-        // Scroll to top of editor
+        setActiveTab('items');
         document.getElementById('editor-panel')?.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -156,7 +179,6 @@ export function MenuBuilder() {
     };
 
     const handleDeleteItem = async (id: string) => {
-        // Prevent emptying a category completely
         const itemToDelete = items.find(i => i.id === id);
         if (itemToDelete) {
             const catItems = items.filter(i => i.category_id === itemToDelete.category_id);
@@ -169,15 +191,12 @@ export function MenuBuilder() {
         if (!confirm("Are you sure you want to delete this item?")) return;
         try {
             await apiCall(`/items/${id}`, 'DELETE');
-            // If we deleted the item currently being edited, reset form
             if (itemForm.id === id) resetItemForm();
             fetchData();
         } catch (e) { alert("Failed to delete item"); }
     };
 
     const handleReorderItem = async (category_id: string, item_id: string, direction: 'up' | 'down') => {
-        // 1. Get items for this specific category
-        // We trust the API provided the ranks correctly.
         const catItems = items
             .filter(i => i.category_id === category_id)
             .sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0));
@@ -186,35 +205,29 @@ export function MenuBuilder() {
         if (currentIndex === -1) return;
 
         const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-
-        // Bounds check
         if (swapIndex < 0 || swapIndex >= catItems.length) return;
 
         const itemA = catItems[currentIndex];
         const itemB = catItems[swapIndex];
 
-        // 2. CRITICAL: Handle "Collision/Tie" Scenario
         const rankA = itemA.rank ?? 0;
         const rankB = itemB.rank ?? 0;
 
         let newRankA, newRankB;
 
         if (rankA === rankB) {
-            // Data is dirty (collision). Enforce standard spacing.
             if (direction === 'up') {
-                newRankA = swapIndex; // e.g. 0
-                newRankB = currentIndex; // e.g. 1
+                newRankA = swapIndex;
+                newRankB = currentIndex;
             } else {
-                newRankA = swapIndex; // e.g. 1
-                newRankB = currentIndex; // e.g. 0
+                newRankA = swapIndex;
+                newRankB = currentIndex;
             }
         } else {
-            // Data is clean. Perform a standard value swap.
             newRankA = rankB;
             newRankB = rankA;
         }
 
-        // 3. Optimistic UI Update
         const updatedItems = items.map(i => {
             if (i.id === itemA.id) return { ...i, rank: newRankA };
             if (i.id === itemB.id) return { ...i, rank: newRankB };
@@ -222,7 +235,6 @@ export function MenuBuilder() {
         });
         setItems(updatedItems);
 
-        // 4. API Call
         const payload = [
             { id: itemA.id!, rank: newRankA },
             { id: itemB.id!, rank: newRankB }
@@ -232,7 +244,7 @@ export function MenuBuilder() {
             await apiCall('/items/reorder', 'PUT', payload);
         } catch (e) {
             console.error("Reorder failed", e);
-            fetchData(); // Rollback on error
+            fetchData();
         }
     };
 
@@ -257,7 +269,9 @@ export function MenuBuilder() {
         finally { setUploading(false); }
     };
 
-    if (loading) return <div className="p-8 flex items-center gap-2"><Loader2 className="animate-spin" /> Loading Menu Data...</div>;
+    if (authLoading || dataLoading) {
+        return <div className="p-8 flex items-center gap-2"><Loader2 className="animate-spin" /> Loading Menu Data...</div>;
+    }
 
     return (
         <div className="flex h-[calc(100vh-64px)] bg-gray-50 overflow-hidden">
