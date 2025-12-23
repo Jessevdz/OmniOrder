@@ -29,15 +29,26 @@ import { KitchenDisplay } from './pages/kitchen/KitchenDisplay';
 
 // Demo Pages
 import { SplitView } from './pages/demo/SplitView';
+import { LandingPage } from './pages/demo/LandingPage'; // <--- Import
 
 function App() {
+    // Helper to determine if we are on the dedicated demo domain
+    const isDemoDomain = window.location.hostname.includes('demo');
+
     return (
         <AuthProvider>
             <CartProvider>
                 <BrowserRouter>
                     <Routes>
                         {/* -----------------------------------------------------
-                            1. PUBLIC STOREFRONT 
+                            0. LANDING PAGE (Demo Domain Only)
+                           ----------------------------------------------------- */}
+                        {isDemoDomain && (
+                            <Route path="/" element={<LandingPage />} />
+                        )}
+
+                        {/* -----------------------------------------------------
+                            1. PUBLIC STOREFRONT (Default Tenant Route)
                            ----------------------------------------------------- */}
                         <Route element={<StoreLayout />}>
                             <Route path="/" element={<MenuPage />} />
@@ -78,6 +89,7 @@ function App() {
                             6. DEMO EXPERIENCE (The "Omni-Shell") 
                            ----------------------------------------------------- */}
                         <Route path="/demo" element={<DemoLayout />}>
+                            {/* Redirect root /demo to split view */}
                             <Route index element={<Navigate to="split" replace />} />
                             <Route path="split" element={<SplitView />} />
 
@@ -91,7 +103,6 @@ function App() {
 
                             <Route path="kitchen" element={<KitchenDisplay />} />
 
-                            {/* Re-use Tenant Layout logic but force rendering inside our shell */}
                             <Route path="admin" element={
                                 <div className="h-full w-full bg-gray-50 overflow-y-auto">
                                     <TenantLayout />
