@@ -21,26 +21,6 @@ export const TenantLayout = () => {
     return (
         <div className="min-h-screen flex flex-col bg-gray-50 font-sans text-gray-900">
 
-            {/* --- DEMO CONTEXT BAR --- */}
-            {isDemoMode && (
-                <div className="bg-neutral-900 text-white px-4 py-2 flex justify-between items-center z-50 shadow-md shrink-0 border-b border-neutral-700">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-blue-600 p-1.5 rounded-md">
-                            <Settings size={16} className="text-white" />
-                        </div>
-                        <span className="text-sm font-medium opacity-90">
-                            <strong>Persona:</strong> Restaurant Manager &mdash; <span className="opacity-70 font-normal">Manage menus, settings, and branding.</span>
-                        </span>
-                    </div>
-                    <button
-                        onClick={() => navigate('/demo/split')}
-                        className="flex items-center gap-2 text-xs font-bold bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-full transition-all border border-white/10"
-                    >
-                        <ArrowLeft size={14} /> Back to Omni View
-                    </button>
-                </div>
-            )}
-
             <div className="flex flex-1 overflow-hidden">
                 {/* Restaurant Admin Sidebar */}
                 <aside className="w-64 bg-white border-r border-gray-200 flex flex-col z-20">
@@ -77,17 +57,6 @@ export const TenantLayout = () => {
                             <Settings size={18} />
                             Settings
                         </NavLink>
-
-                        {/* Quick Link to Storefront for Demo */}
-                        {isDemoMode && (
-                            <button
-                                onClick={() => navigate('/demo/store')}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-all font-medium text-blue-600 hover:bg-blue-50 mt-4"
-                            >
-                                <Eye size={18} />
-                                View Live Store
-                            </button>
-                        )}
                     </nav>
 
                     <div className="p-4 border-t border-gray-100">

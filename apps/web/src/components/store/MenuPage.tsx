@@ -164,19 +164,6 @@ export function MenuPage({ config: propConfig }: MenuPageProps) {
 
             <CategoryNav categories={categories} activeCategory={activeCategory} />
 
-            {/* Quick Add Banner for Demo */}
-            <div className="max-w-screen-xl mx-auto px-4 mt-6">
-                <button
-                    onClick={handleQuickDemoOrder}
-                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-3 rounded-lg shadow-md flex items-center justify-center gap-2 hover:shadow-lg hover:scale-[1.01] transition-all group"
-                >
-                    <div className="bg-white/20 p-1 rounded-full group-hover:rotate-12 transition-transform">
-                        <Zap size={16} fill="currentColor" />
-                    </div>
-                    <span className="font-bold text-sm">Demo Shortcut: Add "Full Meal" Bundle Instantly</span>
-                </button>
-            </div>
-
             <div id="cat-list" className="max-w-screen-xl mx-auto px-4 py-8 md:px-8 scroll-mt-24">
                 {categories.map((cat) => {
                     if (cat.items.length === 0) return null;
