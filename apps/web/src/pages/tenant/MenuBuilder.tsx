@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import {
     Upload, Image as ImageIcon, Loader2, ArrowUp, ArrowDown,
-    Pencil, Trash2, Plus, X, Save, AlertCircle
+    Pencil, Trash2, Plus, X, Save, AlertCircle, Eye
 } from 'lucide-react';
 
 // Types matching backend
@@ -304,12 +304,28 @@ export function MenuBuilder() {
                                 <h3 className="font-bold text-lg text-gray-700">
                                     {formMode === 'create' ? 'Create New Item' : 'Edit Item'}
                                 </h3>
-                                {formMode === 'edit' && (
-                                    <button onClick={resetItemForm} className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded flex items-center gap-1 text-gray-600">
-                                        <X size={12} /> Cancel
-                                    </button>
-                                )}
+
+                                {/* Added: Navigation controls */}
+                                <div className="flex items-center gap-2">
+                                    {/* Contextual link to see changes */}
+                                    {window.location.pathname.includes('/demo') && (
+                                        <a
+                                            href="/demo/split"
+                                            className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2 py-1 rounded flex items-center gap-1 border border-indigo-200"
+                                            title="View changes in Split View"
+                                        >
+                                            <Eye size={12} /> See Live
+                                        </a>
+                                    )}
+
+                                    {formMode === 'edit' && (
+                                        <button onClick={resetItemForm} className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded flex items-center gap-1 text-gray-600">
+                                            <X size={12} /> Cancel
+                                        </button>
+                                    )}
+                                </div>
                             </div>
+
 
                             <form onSubmit={handleItemSubmit} className="space-y-4">
                                 <div>
