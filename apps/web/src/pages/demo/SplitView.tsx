@@ -91,16 +91,30 @@ export function SplitView() {
         }
     };
 
-    // Spotlight Logic: 
-    // Step 1 (Customer Focus) -> Dim Right Pane
-    // Step 2 (Kitchen Focus) -> Dim Left Pane
-    const leftPaneClass = tourActive && tourStep === 2 ? 'opacity-30 blur-sm scale-[0.98]' : 'opacity-100 scale-100';
-    const rightPaneClass = tourActive && tourStep === 1 ? 'opacity-30 blur-sm scale-[0.98]' : 'opacity-100 scale-100';
+    // --- SPOTLIGHT LOGIC ---
+    // Step 1: Spotlight Left (Storefront)
+    // Step 2: Spotlight Right (KDS)
+    // We lift the z-index to 110 to pop over the WelcomeOverlay (z-100)
+
+    const isLeftSpotlight = tourActive && tourStep === 1;
+    const isRightSpotlight = tourActive && tourStep === 2;
+
+    const leftPaneClass = `
+        flex-1 relative bg-white rounded-2xl overflow-hidden shadow-2xl border border-neutral-800 flex flex-col max-w-[500px] mx-auto md:mx-0 md:max-w-none transition-all duration-700 ease-in-out
+        ${tourActive && tourStep === 2 ? 'opacity-30 blur-sm scale-[0.98]' : 'opacity-100 scale-100'}
+        ${isLeftSpotlight ? 'z-[110] ring-4 ring-blue-500/50 shadow-[0_0_50px_rgba(0,0,0,0.5)]' : ''}
+    `;
+
+    const rightPaneClass = `
+        flex-[1.5] hidden md:flex relative bg-neutral-900 rounded-2xl overflow-hidden shadow-2xl border border-neutral-800 flex-col transition-all duration-700 ease-in-out
+        ${tourActive && tourStep === 1 ? 'opacity-30 blur-sm scale-[0.98]' : 'opacity-100 scale-100'}
+        ${isRightSpotlight ? 'z-[110] ring-4 ring-blue-500/50 shadow-[0_0_50px_rgba(0,0,0,0.5)]' : ''}
+    `;
 
     return (
         <div className="flex h-screen w-full bg-neutral-950 p-2 md:p-4 gap-4 relative">
 
-            {/* Tour Overlay */}
+            {/* Tour Overlay (z-index 100) */}
             {tourActive && (
                 <WelcomeOverlay
                     currentStep={tourStep}
@@ -110,7 +124,7 @@ export function SplitView() {
             )}
 
             {/* --- LEFT: The Customer (Storefront) --- */}
-            <div className={`flex-1 relative bg-white rounded-2xl overflow-hidden shadow-2xl border border-neutral-800 flex flex-col max-w-[500px] mx-auto md:mx-0 md:max-w-none transition-all duration-700 ease-in-out ${leftPaneClass}`}>
+            <div className={leftPaneClass}>
                 <div className="absolute top-0 left-0 w-full h-8 bg-neutral-100 border-b border-gray-200 z-50 flex items-center justify-center gap-2">
                     <div className="w-16 h-4 bg-black rounded-full" />
                 </div>
@@ -137,7 +151,7 @@ export function SplitView() {
             </div>
 
             {/* --- RIGHT: The Kitchen (KDS) --- */}
-            <div className={`flex-[1.5] hidden md:flex relative bg-neutral-900 rounded-2xl overflow-hidden shadow-2xl border border-neutral-800 flex-col transition-all duration-700 ease-in-out ${rightPaneClass}`}>
+            <div className={rightPaneClass}>
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 z-50 opacity-50" />
                 <div className="flex-1 overflow-hidden">
                     <KitchenDisplay />
