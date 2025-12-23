@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react'; // <--- Added useRef, useEffect
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChefHat, Store, Settings, SplitSquareVertical, RotateCcw, Palette, Check } from 'lucide-react';
 import { THEME_PRESETS } from '../../utils/theme';
@@ -12,6 +12,27 @@ export const PersonaSwitcher: React.FC<PersonaSwitcherProps> = ({ currentPreset,
     const navigate = useNavigate();
     const location = useLocation();
     const [showThemes, setShowThemes] = useState(false);
+
+    // 1. Create a ref for the container
+    const switcherRef = useRef<HTMLDivElement>(null);
+
+    // 2. Add Click Outside Logic
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (switcherRef.current && !switcherRef.current.contains(event.target as Node)) {
+                setShowThemes(false);
+            }
+        };
+
+        // Only add listener if menu is open
+        if (showThemes) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showThemes]);
 
     const tabs = [
         { id: 'split', label: 'Omni View', path: '/demo/split', icon: SplitSquareVertical },
@@ -36,7 +57,11 @@ export const PersonaSwitcher: React.FC<PersonaSwitcherProps> = ({ currentPreset,
     };
 
     return (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-4">
+        // 3. Attach ref to the main wrapper
+        <div
+            ref={switcherRef}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-4"
+        >
 
             {/* Theme Picker Popover (Appears Above) */}
             {showThemes && (

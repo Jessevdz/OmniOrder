@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import { PersonaSwitcher } from '../components/demo/PersonaSwitcher';
 import { useTenantConfig, TenantConfig } from '../hooks/useTenantConfig';
-import { Loader2 } from 'lucide-react';
+import { DemoLogin } from '../pages/demo/DemoLogin'; // <--- Import new component
 
 export interface DemoContextType {
     config: TenantConfig | null;
@@ -16,7 +16,7 @@ export const DemoLayout = () => {
     const { config: initialConfig } = useTenantConfig();
 
     // 2. State
-    const [demoToken, setDemoToken] = useState<string | null>(null);
+    const [demoToken, setDemoToken] = useState<string | null>(() => sessionStorage.getItem('demo_token'));
     const [activePreset, setActivePreset] = useState<string>('mono-luxe');
 
     useEffect(() => {
@@ -25,35 +25,10 @@ export const DemoLayout = () => {
         }
     }, [initialConfig]);
 
-    // 3. Authenticate (Magic Login)
-    useEffect(() => {
-        const authenticateDemo = async () => {
-            try {
-                // Check session storage first
-                const existing = sessionStorage.getItem('demo_token');
-                if (existing) {
-                    setDemoToken(existing);
-                    return;
-                }
-
-                // Login if no token
-                const res = await fetch('/api/v1/sys/demo-login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code: 'OMNI2025' })
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    setDemoToken(data.access_token);
-                    sessionStorage.setItem('demo_token', data.access_token);
-                }
-            } catch (e) {
-                console.error("Demo Auth failed", e);
-            }
-        };
-        authenticateDemo();
-    }, []);
+    const handleLoginSuccess = (token: string) => {
+        sessionStorage.setItem('demo_token', token);
+        setDemoToken(token);
+    };
 
     const handlePresetChange = async (newPreset: string) => {
         setActivePreset(newPreset);
@@ -79,14 +54,9 @@ export const DemoLayout = () => {
 
     if (!isDemoDomain) return <Navigate to="/" replace />;
 
-    // [CRITICAL FIX] Prevent child routes (MenuBuilder) from loading before token is ready
+    // [UPDATED] If no token, show the Login Screen
     if (!demoToken) {
-        return (
-            <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center text-white gap-4">
-                <Loader2 className="animate-spin text-blue-500" size={48} />
-                <p className="font-mono text-sm opacity-80">Initializing Demo Environment...</p>
-            </div>
-        );
+        return <DemoLogin onLogin={handleLoginSuccess} />;
     }
 
     const demoContext: DemoContextType = {
