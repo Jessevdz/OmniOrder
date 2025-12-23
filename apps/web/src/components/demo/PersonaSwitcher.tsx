@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutTemplate, ChefHat, Store, Settings, SplitSquareVertical } from 'lucide-react';
+import { ChefHat, Store, Settings, SplitSquareVertical, RotateCcw } from 'lucide-react';
 
 export const PersonaSwitcher = () => {
     const navigate = useNavigate();
@@ -11,6 +11,28 @@ export const PersonaSwitcher = () => {
         { id: 'kds', label: 'Kitchen', path: '/demo/kitchen', icon: ChefHat },
         { id: 'admin', label: 'Manager', path: '/demo/admin', icon: Settings },
     ];
+
+    const handleReset = async () => {
+        if (!confirm("Reset Demo?\n\nThis will clear all orders, reset the theme to 'Mono Luxe', and restart the tour.")) return;
+
+        const token = sessionStorage.getItem('demo_token');
+        if (token) {
+            try {
+                await fetch('/api/v1/sys/reset-demo', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            } catch (e) {
+                console.error("Reset failed", e);
+            }
+        }
+
+        // Clear Tour State
+        sessionStorage.removeItem('omni_demo_tour_seen');
+
+        // Force Reload to reset state
+        window.location.href = '/demo/split';
+    };
 
     return (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-10 duration-500">
@@ -30,10 +52,22 @@ export const PersonaSwitcher = () => {
                             `}
                         >
                             <tab.icon size={18} />
-                            {tab.label}
+                            <span className="hidden md:inline">{tab.label}</span>
                         </button>
                     );
                 })}
+
+                {/* Divider */}
+                <div className="w-px h-6 bg-neutral-700 mx-1"></div>
+
+                {/* Reset Button */}
+                <button
+                    onClick={handleReset}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold text-red-400 hover:text-white hover:bg-red-500/20 transition-all"
+                    title="Reset Demo Environment"
+                >
+                    <RotateCcw size={18} />
+                </button>
             </div>
         </div>
     );

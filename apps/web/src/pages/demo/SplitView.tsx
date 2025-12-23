@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { MenuPage } from '../../components/store/MenuPage';
 import { KitchenDisplay } from '../kitchen/KitchenDisplay';
 import { ThemeWidget } from '../../components/demo/ThemeWidget';
-import { WelcomeOverlay } from '../../components/demo/WelcomeOverlay'; // <--- Imported
+import { WelcomeOverlay } from '../../components/demo/WelcomeOverlay';
 import { useTenantConfig, TenantConfig } from '../../hooks/useTenantConfig';
 import { applyTheme } from '../../utils/theme';
 import { FontLoader } from '../../components/FontLoader';
@@ -14,10 +14,23 @@ import { CartProvider } from '../../context/CartContext';
 
 export function SplitView() {
     const { config: initialConfig, loading } = useTenantConfig();
-    const [tourActive, setTourActive] = useState(true);
+
+    // State Persistence for Tour
+    // We check sessionStorage immediately to determine initial state
+    const [tourActive, setTourActive] = useState(() => {
+        const seen = sessionStorage.getItem('omni_demo_tour_seen');
+        return !seen;
+    });
+
     const [tourStep, setTourStep] = useState(0);
     const [localPreset, setLocalPreset] = useState<string | null>(null);
     const [demoToken, setDemoToken] = useState<string | null>(null);
+
+    // Handle Tour Completion
+    const handleTourComplete = () => {
+        setTourActive(false);
+        sessionStorage.setItem('omni_demo_tour_seen', 'true');
+    };
 
     useEffect(() => {
         const authenticateDemo = async () => {
@@ -48,7 +61,7 @@ export function SplitView() {
         authenticateDemo();
     }, []);
 
-    if (loading) return <div className="h-screen bg-neutral-900 text-white flex items-center justify-center">Loading Demo Experience...</div>;
+    if (loading) return <div className="h-screen bg-neutral-950 text-white flex items-center justify-center">Loading Demo Experience...</div>;
 
     const activeConfig = {
         ...initialConfig,
@@ -78,6 +91,9 @@ export function SplitView() {
         }
     };
 
+    // Spotlight Logic: 
+    // Step 1 (Customer Focus) -> Dim Right Pane
+    // Step 2 (Kitchen Focus) -> Dim Left Pane
     const leftPaneClass = tourActive && tourStep === 2 ? 'opacity-30 blur-sm scale-[0.98]' : 'opacity-100 scale-100';
     const rightPaneClass = tourActive && tourStep === 1 ? 'opacity-30 blur-sm scale-[0.98]' : 'opacity-100 scale-100';
 
@@ -89,7 +105,7 @@ export function SplitView() {
                 <WelcomeOverlay
                     currentStep={tourStep}
                     onStepChange={setTourStep}
-                    onComplete={() => setTourActive(false)}
+                    onComplete={handleTourComplete}
                 />
             )}
 
