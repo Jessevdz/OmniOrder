@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, useOutletContext } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 import { MenuPage } from '../../components/store/MenuPage';
 import { KitchenDisplay } from '../kitchen/KitchenDisplay';
 import { WelcomeOverlay } from '../../components/demo/WelcomeOverlay';
@@ -59,6 +59,7 @@ export function SplitView() {
 
             {/* LEFT: Customer View */}
             <div className={leftPaneClass}>
+                {/* The "Notch" Header */}
                 <div className="absolute top-0 left-0 w-full h-8 bg-neutral-100 border-b border-gray-200 z-50 flex items-center justify-center gap-2">
                     <div className="w-16 h-4 bg-black rounded-full" />
                 </div>
@@ -66,7 +67,13 @@ export function SplitView() {
                 <div style={themeStyles} className="flex-1 overflow-y-auto bg-app text-text-main font-body pt-8 relative scroll-smooth no-scrollbar">
                     <FontLoader fontFamily={config.font_family} />
                     <CartProvider>
-                        <OrderStatusBanner />
+                        {/* ADJUSTMENT: 
+                            1. Fixed positioning here works relative to the transform parent (leftPaneClass).
+                            2. top-8 accounts for the 32px height of the notch header.
+                            3. z-40 ensures it floats above content but below the notch (z-50).
+                        */}
+                        <OrderStatusBanner className="fixed top-8 left-0 w-full z-40 animate-in slide-in-from-top duration-300" />
+
                         <div className="pb-24">
                             {/* Pass config explicitly to ensure immediate re-render on context change */}
                             <MenuPage config={config} />
