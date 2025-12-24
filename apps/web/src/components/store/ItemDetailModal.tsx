@@ -132,6 +132,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
     const modalStyles = {
         'mono-luxe': 'rounded-none border border-white/10 max-w-2xl',
         'fresh-market': 'rounded-[32px] border-none shadow-2xl max-w-lg',
+        'stelly': 'rounded-2xl border border-slate-200 shadow-2xl max-w-xl',
         'tech-ocean': 'rounded-xl border border-primary/30 shadow-[0_0_40px_rgba(59,130,246,0.2)] max-w-xl'
     }[preset] || 'rounded-lg';
 

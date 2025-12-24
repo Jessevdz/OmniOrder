@@ -14,7 +14,7 @@ export const MenuGridItem: React.FC<MenuItemProps> = ({ item, onAdd, preset = 'm
     // --- THEME LOGIC ---
     // Different presets have different "Add to Cart" interactions
     const renderAddButton = () => {
-        if (preset === 'fresh-market') {
+        if (preset === 'fresh-market' || preset === 'stelly') {
             // Big pill button at bottom
             return (
                 <div className="mt-4">

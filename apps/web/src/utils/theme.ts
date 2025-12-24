@@ -2,6 +2,32 @@ import React from 'react';
 
 // Extended Token System for "Vibe" Control
 export const THEME_PRESETS: Record<string, React.CSSProperties> = {
+    'stelly': {
+        // Base Colors - Matches LandingPage "Blue-600" and Slate grays
+        '--color-primary': '#2563EB',
+        '--color-primary-contrast': '#FFFFFF',
+        '--color-secondary': '#64748B', // Slate 500
+
+        // Backgrounds - Matches LandingPage "Slate-50"
+        '--color-bg-app': '#F8FAFC',
+        '--color-bg-surface': '#FFFFFF',
+
+        // Typography & Text
+        '--color-text-main': '#0F172A', // Slate 900
+        '--color-text-muted': '#64748B', // Slate 500
+        '--font-heading-case': 'none',
+        '--font-heading-weight': '700',
+
+        // Shapes & Texture - Matches "rounded-2xl" from LandingPage
+        '--color-border': '#E2E8F0', // Slate 200
+        '--radius-sm': '0.5rem',
+        '--radius-md': '0.75rem',
+        '--radius-lg': '1rem',
+        '--shadow-depth': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+        '--glass-blur': '0px',
+        '--overlay-opacity': '0.05',
+    } as React.CSSProperties,
+
     'mono-luxe': {
         // Base Colors
         '--color-primary': '#000000',

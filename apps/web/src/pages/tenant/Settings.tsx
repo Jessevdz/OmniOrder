@@ -20,6 +20,13 @@ interface ThemeConfig {
 
 const PRESETS = [
     {
+        id: 'stelly',
+        name: 'Cloud Kitchen',
+        desc: 'Clean, SaaS-style, optimized for clarity.',
+        previewBg: '#F8FAFC',
+        previewFg: '#2563EB'
+    },
+    {
         id: 'mono-luxe',
         name: 'Mono Luxe',
         desc: 'High contrast, sophisticated, minimal.',

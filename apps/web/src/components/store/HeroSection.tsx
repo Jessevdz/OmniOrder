@@ -88,7 +88,7 @@ const RestaurantInfoModal = ({ isOpen, onClose, name }: { isOpen: boolean; onClo
 export const HeroSection: React.FC<HeroProps> = ({
     name,
     coverImage,
-    preset = 'mono-luxe'
+    preset = 'stelly'
 }) => {
     const [showInfo, setShowInfo] = useState(false);
 
@@ -99,6 +99,7 @@ export const HeroSection: React.FC<HeroProps> = ({
     const layoutMode = {
         'mono-luxe': 'centered',
         'fresh-market': 'split',
+        'stelly': 'split',
         'tech-ocean': 'banner'
     }[preset] || 'centered';
 

@@ -83,6 +83,7 @@ export const DemoLayout = () => {
 
 function getPresetDefaultColor(preset: string): string {
     switch (preset) {
+        case 'stelly': return '#2563EB';
         case 'fresh-market': return '#16A34A';
         case 'tech-ocean': return '#3B82F6';
         default: return '#000000';
