@@ -29,7 +29,7 @@ class Settings(BaseSettings):
 
     # Demo Mode Configuration
     DEMO_DOMAIN: str = "demo.stelly.localhost"
-    DEMO_ACCESS_CODE: str = "OMNI2025"
+    DEMO_ACCESS_CODE: str = "STELLYDEMO"
     DEMO_SCHEMA: str = "tenant_demo"
 
     # Storage (MinIO/S3)

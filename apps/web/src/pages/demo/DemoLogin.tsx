@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { ArrowRight, Lock, MonitorPlay, Loader2 } from 'lucide-react';
-import { BrandButton } from '../../components/common/BrandButton';
 
 interface DemoLoginProps {
     onLogin: (token: string) => void;
@@ -28,10 +27,10 @@ export const DemoLogin: React.FC<DemoLoginProps> = ({ onLogin }) => {
             if (res.ok) {
                 onLogin(data.access_token);
             } else {
-                setError(data.detail || 'Invalid Access Code');
+                setError(data.detail || 'Ongeldige toegangscode');
             }
         } catch (err) {
-            setError('Connection failed. Is the backend running?');
+            setError('Verbinding mislukt. Draait de backend?');
         } finally {
             setLoading(false);
         }
@@ -51,12 +50,12 @@ export const DemoLogin: React.FC<DemoLoginProps> = ({ onLogin }) => {
                         <MonitorPlay size={32} className="text-white" />
                     </div>
                     <h1 className="text-3xl font-bold tracking-tight mb-2">Stelly Demo</h1>
-                    <p className="text-neutral-400">Enter the access code to initialize the multi-tenant simulation environment.</p>
+                    <p className="text-neutral-400">Vul de code in om toegang te krijgen.</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
-                        <label className="text-xs font-bold uppercase tracking-widest text-neutral-500">Access Code</label>
+                        <label className="text-xs font-bold uppercase tracking-widest text-neutral-500">Toegangscode</label>
                         <div className="relative">
                             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
                             <input
@@ -83,20 +82,17 @@ export const DemoLogin: React.FC<DemoLoginProps> = ({ onLogin }) => {
                     >
                         {loading ? (
                             <>
-                                <Loader2 size={18} className="animate-spin" /> Initializing...
+                                <Loader2 size={18} className="animate-spin" /> Laden...
                             </>
                         ) : (
                             <>
-                                Enter Environment <ArrowRight size={18} />
+                                Start Omgeving <ArrowRight size={18} />
                             </>
                         )}
                     </button>
                 </form>
 
                 <div className="mt-8 pt-6 border-t border-neutral-800 text-center">
-                    <p className="text-xs text-neutral-600 font-mono">
-                        Hint: The code is <span className="text-neutral-400 font-bold">OMNI2025</span>
-                    </p>
                 </div>
             </div>
         </div>
