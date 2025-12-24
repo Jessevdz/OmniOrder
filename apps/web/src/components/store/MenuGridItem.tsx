@@ -99,8 +99,8 @@ export const MenuGridItem: React.FC<MenuItemProps> = ({ item, onAdd, preset = 'm
                     <h3 className="text-lg font-bold font-heading text-text-main leading-tight case-brand">
                         {item.name}
                     </h3>
-                    {/* For Mono Luxe/Tech Ocean, price is up top. For Fresh Market, it's in the button. */}
-                    {preset !== 'fresh-market' && (
+                    {/* For Mono Luxe/Tech Ocean, price is up top. For others, it's in the button. */}
+                    {(preset !== 'fresh-market' && preset !== 'stelly') && (
                         <span className="font-bold text-primary text-lg">
                             ${(item.price / 100).toFixed(2)}
                         </span>
@@ -111,8 +111,8 @@ export const MenuGridItem: React.FC<MenuItemProps> = ({ item, onAdd, preset = 'm
                     {item.description || "No description available."}
                 </p>
 
-                {/* Render Button based on Theme Logic */}
-                {preset === 'fresh-market' && renderAddButton()}
+                {/* Render Button based on Theme Logic - FIXED HERE */}
+                {(preset === 'fresh-market' || preset === 'stelly') && renderAddButton()}
             </div>
 
             {/* Mono Luxe Button lives absolute bottom-right */}

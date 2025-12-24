@@ -61,8 +61,18 @@ export const DemoLayout = () => {
         return <DemoLogin onLogin={handleLoginSuccess} />;
     }
 
+    // [FIX APPLIED HERE]
+    // Dynamically calculate the primary color based on the ACTIVE preset,
+    // rather than relying on the stale initialConfig color.
+    const activePrimaryColor = getPresetDefaultColor(activePreset);
+
     const demoContext: DemoContextType = {
-        config: initialConfig ? { ...initialConfig, preset: activePreset } : null,
+        config: initialConfig ? {
+            ...initialConfig,
+            preset: activePreset,
+            // Force override the color in the context to match the preset immediately
+            primary_color: activePrimaryColor
+        } : null,
         preset: activePreset,
         updatePreset: handlePresetChange
     };
