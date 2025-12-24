@@ -3,7 +3,6 @@ import logging
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
-# [Fix 1] Explicitly import Order to ensure it registers in Base.metadata
 from app.db.models import (
     Tenant,
     Category,
@@ -17,6 +16,23 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+# --- STATIC UUIDs FOR DEMO CONSISTENCY ---
+# We use fixed IDs so that a user browsing the generic demo menu can seamlessly
+# transition to a personalized demo session without their cart becoming invalid.
+DEMO_IDS = {
+    "cat_specials": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+    "item_burger": "b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b11",
+    "item_salmon": "b2eebc99-9c0b-4ef8-bb6d-6bb9bd380b22",
+    "item_risotto": "b3eebc99-9c0b-4ef8-bb6d-6bb9bd380b33",
+    "cat_mains": "a1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22",
+    "item_calamari": "c1eebc99-9c0b-4ef8-bb6d-6bb9bd380c11",
+    "item_fries": "c2eebc99-9c0b-4ef8-bb6d-6bb9bd380c22",
+    "item_sprouts": "c3eebc99-9c0b-4ef8-bb6d-6bb9bd380c33",
+    "cat_drinks": "a2eebc99-9c0b-4ef8-bb6d-6bb9bd380a33",
+    "item_yuzu": "d1eebc99-9c0b-4ef8-bb6d-6bb9bd380d11",
+    "item_nitro": "d2eebc99-9c0b-4ef8-bb6d-6bb9bd380d22",
+}
+
 # --- HIGH FIDELITY DEMO DATA ---
 DEMO_TENANT_SEED = {
     "name": "Bistro Stelly",
@@ -24,7 +40,7 @@ DEMO_TENANT_SEED = {
     "schema_name": settings.DEMO_SCHEMA,
     "theme_config": {
         "preset": "stelly",
-        "primary_color": "#000000",
+        "primary_color": "#2563EB",
         "font_family": "Inter",
         "address": "101 Demo Lane, Tech City",
         "email": "demo@stelly.localhost",
@@ -36,10 +52,12 @@ DEMO_TENANT_SEED = {
     },
     "categories": [
         {
+            "id": DEMO_IDS["cat_specials"],
             "name": "Specialiteiten",
             "rank": 0,
             "items": [
                 {
+                    "id": DEMO_IDS["item_burger"],
                     "name": "The Iron Skillet Burger",
                     "desc": "Double wagyu smash patties, aged gruyere, caramelized onion jam, and truffle aioli on a toasted brioche bun.",
                     "price": 1800,
@@ -68,6 +86,7 @@ DEMO_TENANT_SEED = {
                     ],
                 },
                 {
+                    "id": DEMO_IDS["item_salmon"],
                     "name": "Miso Glazed Salmon",
                     "desc": "Sustainably sourced Atlantic salmon, forbidden rice, sesame cucumber salad, and a ginger-soy reduction.",
                     "price": 2400,
@@ -75,6 +94,7 @@ DEMO_TENANT_SEED = {
                     "modifiers": [],
                 },
                 {
+                    "id": DEMO_IDS["item_risotto"],
                     "name": "Truffle Mushroom Risotto",
                     "desc": "Arborio rice, wild mushrooms, white truffle oil, 24-month parmesan, and fresh herbs.",
                     "price": 2100,
@@ -84,10 +104,12 @@ DEMO_TENANT_SEED = {
             ],
         },
         {
+            "id": DEMO_IDS["cat_mains"],
             "name": "Hoofdgerechten",
             "rank": 1,
             "items": [
                 {
+                    "id": DEMO_IDS["item_calamari"],
                     "name": "Crispy Calamari",
                     "desc": "Flash-fried Rhode Island squid, served with spicy marinara and charred lemon.",
                     "price": 1400,
@@ -95,6 +117,7 @@ DEMO_TENANT_SEED = {
                     "modifiers": [],
                 },
                 {
+                    "id": DEMO_IDS["item_fries"],
                     "name": "Parmesan Truffle Fries",
                     "desc": "Hand-cut kennebec potatoes, tossed in white truffle oil and herbs.",
                     "price": 900,
@@ -113,6 +136,7 @@ DEMO_TENANT_SEED = {
                     ],
                 },
                 {
+                    "id": DEMO_IDS["item_sprouts"],
                     "name": "Charred Brussels Sprouts",
                     "desc": "Pan-seared with balsamic glaze, pancetta, and toasted pecans.",
                     "price": 1100,
@@ -122,10 +146,12 @@ DEMO_TENANT_SEED = {
             ],
         },
         {
+            "id": DEMO_IDS["cat_drinks"],
             "name": "Dranken",
             "rank": 2,
             "items": [
                 {
+                    "id": DEMO_IDS["item_yuzu"],
                     "name": "Yuzu Basil Smash",
                     "desc": "Fresh yuzu juice, thai basil, sparkling mineral water, cane sugar. (Non-Alcoholic)",
                     "price": 650,
@@ -133,6 +159,7 @@ DEMO_TENANT_SEED = {
                     "modifiers": [],
                 },
                 {
+                    "id": DEMO_IDS["item_nitro"],
                     "name": "Cold Brew Nitro",
                     "desc": "Single-origin beans steeped for 24 hours, infused with nitrogen for a creamy texture.",
                     "price": 550,
@@ -217,7 +244,6 @@ def provision_tenant_internal(
 ):
     """
     Provisions a tenant. Checks if tables exist and creates them if needed.
-    Can skip creating the public Tenant record if this is an ephemeral session.
     """
     schema = seed_data["schema_name"]
     is_demo = seed_data["domain"] == settings.DEMO_DOMAIN
@@ -230,7 +256,6 @@ def provision_tenant_internal(
         if existing:
             logger.info(f"Tenant {seed_data['name']} record exists.")
             if is_demo:
-                # For demo, we always want to ensure config is fresh
                 existing.theme_config = seed_data["theme_config"]
                 db.commit()
         else:
@@ -244,44 +269,30 @@ def provision_tenant_internal(
             db.add(new_tenant)
             db.commit()
 
-    # 2. Schema Creation & Reset
-    # [Fix 2] For DEMO only: Drop schema to force clean slate if it got corrupted
+    # 2. Schema Creation
     if is_demo and not skip_public_record:
-        logger.info(f"Demo Mode: Ensuring clean state for {schema}")
+        # For the generic demo tenant, we are resilient.
         try:
-            # We check if tables exist; if not, we might as well drop schema to be safe
-            # But simpler: just create if not exists.
             db.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
             db.commit()
         except Exception as e:
             logger.error(f"Schema op failed: {e}")
-
     else:
-        # Standard Tenants or Ephemeral Sessions
         try:
             db.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
             db.commit()
         except Exception as e:
             logger.error(f"Failed to create schema {schema}: {e}")
-            # If creating schema fails, we probably can't proceed
             return
 
     # 3. Table Creation
-    # We use the engine directly to ensure binding to the correct schema context
     try:
         with engine.begin() as connection:
             connection.execute(text(f"SET search_path TO {schema}"))
-
-            # Filter for tenant tables (exclude public)
             tenant_tables = [
                 t for t in Base.metadata.sorted_tables if t.schema != "public"
             ]
-
-            logger.info(
-                f"Creating tables in {schema}: {[t.name for t in tenant_tables]}"
-            )
             Base.metadata.create_all(bind=connection, tables=tenant_tables)
-
     except Exception as e:
         logger.error(f"Failed to create tables for {schema}: {e}")
         return
@@ -289,27 +300,28 @@ def provision_tenant_internal(
     # 4. Data Seeding
     db.execute(text(f"SET search_path TO {schema}"))
 
-    # Check if data exists
+    # If data exists, skip (unless we want to force updates, but keep it simple)
     if db.query(Category).count() > 0:
-        if not is_demo:
-            logger.info(f"Data exists for {schema}, skipping seed.")
-            return
-        # If demo, we might want to reset?
-        # For now, let's assume if data exists, we are good.
         return
 
     logger.info(f"Seeding Data for {schema}...")
 
     for i, cat_data in enumerate(seed_data["categories"]):
+        # Use provided static ID if available, else new UUID
+        cat_id = cat_data.get("id") or uuid.uuid4()
+
         category = Category(
-            id=uuid.uuid4(), name=cat_data["name"], rank=cat_data.get("rank", i)
+            id=cat_id, name=cat_data["name"], rank=cat_data.get("rank", i)
         )
         db.add(category)
         db.flush()
 
         for item_data in cat_data["items"]:
+            # Use provided static ID if available
+            item_id = item_data.get("id") or uuid.uuid4()
+
             item = MenuItem(
-                id=uuid.uuid4(),
+                id=item_id,
                 name=item_data["name"],
                 description=item_data.get("desc"),
                 price=item_data["price"],

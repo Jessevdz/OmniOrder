@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
 import { BrandButton } from './common/BrandButton';
 import { X, ShoppingBag, Trash2, User, Hash } from 'lucide-react';
-import { useAuth } from '../context/AuthContext'; // <--- Import
+import { useAuth } from '../context/AuthContext';
 
 export function CartDrawer() {
     const {
@@ -10,9 +10,9 @@ export function CartDrawer() {
         cartTotal, clearCart, setActiveOrderId
     } = useCart();
 
-    const { user } = useAuth();
+    // 1. Get the token from AuthContext
+    const { user, token } = useAuth();
 
-    // Local state for fulfillment details
     const [customerName, setCustomerName] = useState('');
     const [tableNumber, setTableNumber] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -20,17 +20,13 @@ export function CartDrawer() {
     // PRE-FILL FOR DEMO
     useEffect(() => {
         if (isDrawerOpen && items.length > 0 && !customerName) {
-            // Check if we are in demo environment
             const isDemo = window.location.hostname.includes('demo') || window.location.hostname.includes('localhost');
-
             if (isDemo) {
-                // UPDATED: Use actual authenticated name if available
                 setCustomerName(user?.profile?.name || "Demo Guest");
             }
         }
     }, [isDrawerOpen, items.length, user]);
 
-    // ... rest of the component remains the same ...
     const handleCheckout = async () => {
         if (items.length === 0) return;
         if (!customerName.trim()) {
@@ -51,9 +47,17 @@ export function CartDrawer() {
         };
 
         try {
+            // 2. Prepare headers
+            const headers: HeadersInit = { 'Content-Type': 'application/json' };
+
+            // 3. Inject Token if present (Crucial for Demo Isolation)
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
             const res = await fetch('/api/v1/store/orders', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: headers, // <--- Use the headers object
                 body: JSON.stringify(payload)
             });
 
@@ -61,8 +65,6 @@ export function CartDrawer() {
                 const data = await res.json();
                 setActiveOrderId(data.id);
                 clearCart();
-                // Don't reset customerName so they can order again easily in demo
-                // setCustomerName(''); 
                 setTableNumber('');
                 toggleDrawer(false);
             } else {
@@ -91,6 +93,7 @@ export function CartDrawer() {
             />
 
             <div className="fixed inset-y-0 right-0 w-full md:w-96 bg-white shadow-2xl z-50 flex flex-col transform transition-transform animate-in slide-in-from-right duration-300">
+                {/* ... (rest of the UI remains exactly the same) ... */}
                 <div className="p-4 bg-primary text-primary-fg flex justify-between items-center shadow-md">
                     <div className="flex items-center gap-2">
                         <ShoppingBag size={20} />

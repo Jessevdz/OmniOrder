@@ -3,6 +3,7 @@ import { Outlet, Navigate } from 'react-router-dom';
 import { PersonaSwitcher } from '../components/demo/PersonaSwitcher';
 import { useTenantConfig, TenantConfig } from '../hooks/useTenantConfig';
 import { DemoLogin } from '../pages/demo/DemoLogin';
+import { useCart } from '../context/CartContext';
 
 export interface DemoContextType {
     config: TenantConfig | null;
@@ -26,10 +27,12 @@ export const DemoLayout = () => {
     }, [initialConfig]);
 
     // UPDATED: Accept user object
+    const { clearCart } = useCart(); // Hook
     const handleLoginSuccess = (token: string, user: any) => {
         sessionStorage.setItem('demo_token', token);
         sessionStorage.setItem('demo_user', JSON.stringify(user)); // Persist user details
         setDemoToken(token);
+        clearCart();
     };
 
     const handlePresetChange = async (newPreset: string) => {

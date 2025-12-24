@@ -14,10 +14,12 @@ from app.schemas.menu import CategoryWithItems
 from app.core.socket import manager
 from app.core.ratelimit import RateLimiter
 from app.core.config import settings
+from app.api.v1.deps import get_current_user  # Need this to parse token safely
 from pydantic import BaseModel
 from typing import List, Literal, Optional
 from datetime import datetime
 from uuid import UUID
+from jose import jwt, JWTError  # Need low-level decode for initial tenant resolution
 
 router = APIRouter()
 # --- Config Schemas ---
@@ -34,17 +36,12 @@ class TenantConfigResponse(BaseModel):
     font_family: str = "Inter"
     currency: str = "$"
     preset: str = "mono-luxe"
-    # Contact Info
     address: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
     operating_hours: List[OperatingHour] = []
 
 
-# --- Order Schemas ---
-
-
-# Input Schema for Modifiers
 class OrderModifierSchema(BaseModel):
     optionId: UUID
 
@@ -87,26 +84,58 @@ class OrderStatusUpdate(BaseModel):
     status: Literal["PENDING", "QUEUED", "PREPARING", "READY", "COMPLETED"]
 
 
-# --- Helpers ---
-def get_tenant_by_host(request: Request, db: Session) -> Tenant:
+# --- UPDATED HELPER ---
+def resolve_tenant_context(request: Request, db: Session) -> Tenant:
+    """
+    Determines the correct Tenant/Schema to use.
+    Prioritizes Auth Token 'target_schema' for Demo isolation.
+    """
     host = request.headers.get("host", "").split(":")[0]
 
-    # DEMO OVERRIDE LOGIC
+    # 1. Check for Authorization Header (Magic Token Override)
+    auth_header = request.headers.get("Authorization")
+    target_schema = None
+
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        try:
+            # We decoded crudely here just to get the schema claim quickly
+            # Security verification happens in `get_current_user` dependency usually,
+            # but for tenant resolution strictly, this is acceptable if we fallback safely.
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+            target_schema = payload.get("target_schema")
+        except JWTError:
+            pass  # Invalid token, fall back to host resolution
+
+    # 2. Logic for Demo Domain
     if host == settings.DEMO_DOMAIN:
-        # We explicitly fetch the demo tenant definition
-        # Ensure we are in public to read tenants table
+        # If we found a specific schema in the token, return a virtual tenant object
+        if target_schema:
+            # Ensure we are in public to read the base config, OR just use the ephemeral schema
+            # We need to construct a Tenant object that points to this schema
+            return Tenant(
+                name="Demo Session",
+                domain=host,
+                schema_name=target_schema,
+                theme_config={},  # Config is fetched separately usually
+            )
+
+        # Fallback: The generic read-only demo tenant
         db.execute(text("SET search_path TO public"))
         tenant = (
             db.query(Tenant).filter(Tenant.schema_name == settings.DEMO_SCHEMA).first()
         )
         if not tenant:
-            raise HTTPException(status_code=500, detail="Demo tenant not seeded.")
+            # Should be seeded
+            raise HTTPException(status_code=500, detail="Generic demo tenant missing.")
         return tenant
 
-    # Standard Logic
+    # 3. Standard Logic (Subdomains/Custom Domains)
+    db.execute(text("SET search_path TO public"))
     tenant = db.query(Tenant).filter(Tenant.domain == host).first()
     if not tenant:
         raise HTTPException(status_code=404, detail=f"No tenant found for: {host}")
+
     return tenant
 
 
@@ -115,8 +144,33 @@ def get_tenant_by_host(request: Request, db: Session) -> Tenant:
 
 @router.get("/config", response_model=TenantConfigResponse)
 def get_store_config(request: Request, db: Session = Depends(get_db)):
-    tenant = get_tenant_by_host(request, db)
-    theme = tenant.theme_config or {}
+    # Config is tricky because ephemeral sessions might not have a full row in 'public.tenants'
+    # IF you created a row in sys.py (which we did), this works.
+
+    # 1. Resolve Schema
+    tenant_context = resolve_tenant_context(request, db)
+
+    # 2. Fetch Config from Public Table
+    db.execute(text("SET search_path TO public"))
+
+    # We query by schema_name because the 'id' might be virtual/unknown in the context object
+    real_tenant = (
+        db.query(Tenant)
+        .filter(Tenant.schema_name == tenant_context.schema_name)
+        .first()
+    )
+
+    # Fallback for generic demo if token schema not found (e.g. expired session)
+    if not real_tenant and tenant_context.schema_name.startswith("demo_"):
+        # Try fetching the generic demo config so the UI doesn't crash
+        real_tenant = (
+            db.query(Tenant).filter(Tenant.schema_name == settings.DEMO_SCHEMA).first()
+        )
+
+    if not real_tenant:
+        return TenantConfigResponse(name="Store Not Found", primary_color="#000")
+
+    theme = real_tenant.theme_config or {}
 
     default_hours = [
         {"label": "Mon - Fri", "time": "11:00 AM - 10:00 PM"},
@@ -124,7 +178,7 @@ def get_store_config(request: Request, db: Session = Depends(get_db)):
     ]
 
     return TenantConfigResponse(
-        name=tenant.name,
+        name=real_tenant.name,
         primary_color=theme.get("primary_color", "#000000"),
         font_family=theme.get("font_family", "Inter"),
         preset=theme.get("preset", "mono-luxe"),
@@ -137,7 +191,9 @@ def get_store_config(request: Request, db: Session = Depends(get_db)):
 
 @router.get("/menu", response_model=List[CategoryWithItems])
 def get_store_menu(request: Request, db: Session = Depends(get_db)):
-    tenant = get_tenant_by_host(request, db)
+    tenant = resolve_tenant_context(request, db)
+
+    # Switch to specific schema
     db.execute(text(f"SET search_path TO {tenant.schema_name}, public"))
 
     categories = (
@@ -160,9 +216,8 @@ def get_store_menu(request: Request, db: Session = Depends(get_db)):
 def get_active_orders(request: Request, db: Session = Depends(get_db)):
     """
     Fetch active orders for the KDS (Persistence).
-    UPDATED: Returns PENDING, QUEUED, PREPARING, and READY orders.
     """
-    tenant = get_tenant_by_host(request, db)
+    tenant = resolve_tenant_context(request, db)
     db.execute(text(f"SET search_path TO {tenant.schema_name}, public"))
 
     orders = (
@@ -184,7 +239,8 @@ async def update_order_status(
     """
     Update order status and sync via WebSocket.
     """
-    tenant = get_tenant_by_host(request, db)
+    tenant = resolve_tenant_context(request, db)
+
     # 1. Initial Context Set
     db.execute(text(f"SET search_path TO {tenant.schema_name}, public"))
 
@@ -195,13 +251,11 @@ async def update_order_status(
     order.status = payload.status
     db.commit()
 
-    # Re-apply schema context because commit() resets the transaction state.
-    # Without this, the subsequent implicit refresh looks in 'public'.
+    # Re-apply schema context because commit() resets transaction state
     db.execute(text(f"SET search_path TO {tenant.schema_name}, public"))
     db.refresh(order)
 
-    # Broadcast status change to all connected KDS screens
-    # Accessing order.id or order.status here is now safe
+    # Broadcast using the SPECIFIC schema name
     await manager.broadcast_to_tenant(
         tenant.schema_name,
         {
@@ -231,27 +285,24 @@ async def create_store_order(
     """
     Creates an order with SERVER-SIDE price calculation and Daily Ticket #.
     """
-    tenant = get_tenant_by_host(request, db)
+    # 1. Resolve Tenant (Crucial for Demo Isolation)
+    tenant = resolve_tenant_context(request, db)
 
-    # 1. Set Context
+    # 2. Set Context
     schema_context_sql = text(f"SET search_path TO {tenant.schema_name}, public")
     db.execute(schema_context_sql)
 
-    # 1. Logic to Calculate Daily Ticket Number
-    # Get the start of the current day (UTC)
+    # 3. Calculate Daily Ticket Number
     today_start = datetime.utcnow().date()
-
-    # Find the highest ticket number created today
     last_order = (
         db.query(Order.ticket_number)
         .filter(func.date(Order.created_at) == today_start)
         .order_by(Order.ticket_number.desc())
         .first()
     )
-
     next_ticket_num = (last_order[0] + 1) if last_order else 1
 
-    # 2. Fetch all referenced Menu Items and Modifiers in bulk (Existing Logic)
+    # 4. Fetch Items & Modifiers (unchanged logic)
     item_ids = [item.id for item in payload.items]
     modifier_ids = [mod.optionId for item in payload.items for mod in item.modifiers]
 
@@ -263,7 +314,6 @@ async def create_store_order(
     )
     mods_map = {mod.id: mod for mod in db_modifiers}
 
-    # 3. Calculate Totals (Existing Logic)
     grand_total = 0
     items_snapshot = []
 
@@ -303,11 +353,10 @@ async def create_store_order(
     if grand_total == 0 and not items_snapshot:
         raise HTTPException(status_code=400, detail="Order cannot be empty")
 
-    # 4. Create Order Record with new fields
     new_order = Order(
-        ticket_number=next_ticket_num,  # Saved
+        ticket_number=next_ticket_num,
         customer_name=payload.customer_name,
-        table_number=payload.table_number,  # Saved
+        table_number=payload.table_number,
         total_amount=grand_total,
         items=items_snapshot,
         status="PENDING",
@@ -317,15 +366,9 @@ async def create_store_order(
 
     try:
         db.commit()
-
-        # [CRITICAL FIX]
-        # Commit closes the transaction and often resets the session search_path.
-        # We must re-apply the tenant schema before we refresh, otherwise it looks in 'public'.
-        db.execute(schema_context_sql)
-
+        db.execute(schema_context_sql)  # Re-apply context
         db.refresh(new_order)
 
-        # Prepare broadcast data including Ticket # and Table
         order_data = {
             "id": str(new_order.id),
             "ticket_number": new_order.ticket_number,
@@ -341,7 +384,7 @@ async def create_store_order(
         print(f"Order Placement Error: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to place order: {e}")
 
-    # 5. Broadcast new order
+    # 5. Broadcast to the ISOLATED schema channel
     await manager.broadcast_to_tenant(
         tenant.schema_name,
         {
@@ -361,14 +404,9 @@ async def create_store_order(
 
 @router.get("/orders/{order_id}", response_model=OrderResponse)
 def get_order_status(order_id: str, request: Request, db: Session = Depends(get_db)):
-    """
-    Allow customers to poll the status of their specific order ID.
-    UUID prevents easy enumeration/snooping of other orders.
-    """
-    tenant = get_tenant_by_host(request, db)
+    tenant = resolve_tenant_context(request, db)
     db.execute(text(f"SET search_path TO {tenant.schema_name}, public"))
 
-    # Convert str to UUID for safe query
     try:
         oid = UUID(order_id)
     except ValueError:
