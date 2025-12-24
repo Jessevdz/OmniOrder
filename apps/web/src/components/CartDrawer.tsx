@@ -94,7 +94,7 @@ export function CartDrawer() {
                 <div className="p-4 bg-primary text-primary-fg flex justify-between items-center shadow-md">
                     <div className="flex items-center gap-2">
                         <ShoppingBag size={20} />
-                        <h2 className="font-bold text-lg">Your Order</h2>
+                        <h2 className="font-bold text-lg">Jouw Bestelling</h2>
                     </div>
                     <button onClick={() => toggleDrawer(false)} className="hover:opacity-80">
                         <X size={24} />

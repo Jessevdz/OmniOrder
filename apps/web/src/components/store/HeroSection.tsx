@@ -23,7 +23,7 @@ const RestaurantInfoModal = ({ isOpen, onClose, name }: { isOpen: boolean; onClo
                 <div className="bg-[var(--color-bg-app)] p-6 border-b border-border flex justify-between items-start">
                     <div>
                         <h3 className="text-xl font-bold font-heading case-brand text-text-main">{name}</h3>
-                        <p className="text-sm text-text-muted mt-1">Est. 2023</p>
+                        <p className="text-sm text-text-muted mt-1">Sinds 2022</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-black/5 rounded-full transition-colors text-text-main">
                         <X size={20} />
@@ -38,12 +38,12 @@ const RestaurantInfoModal = ({ isOpen, onClose, name }: { isOpen: boolean; onClo
                             <MapPin className="text-primary" size={20} />
                         </div>
                         <div>
-                            <h4 className="font-bold text-text-main text-sm uppercase tracking-wide mb-1">Visit Us</h4>
+                            <h4 className="font-bold text-text-main text-sm uppercase tracking-wide mb-1">Adres</h4>
                             <p className="text-text-muted text-sm leading-relaxed">
-                                123 Culinary Avenue<br />
-                                Food District, FD 90210
+                                Lekkerdreef, 26<br />
+                                2260, Westerlo
                             </p>
-                            <a href="#" className="text-primary text-xs font-bold mt-2 inline-block hover:underline">Get Directions &rarr;</a>
+                            <a href="#" className="text-primary text-xs font-bold mt-2 inline-block hover:underline">Google Maps</a>
                         </div>
                     </div>
 
@@ -53,10 +53,10 @@ const RestaurantInfoModal = ({ isOpen, onClose, name }: { isOpen: boolean; onClo
                             <Clock className="text-primary" size={20} />
                         </div>
                         <div>
-                            <h4 className="font-bold text-text-main text-sm uppercase tracking-wide mb-1">Opening Hours</h4>
+                            <h4 className="font-bold text-text-main text-sm uppercase tracking-wide mb-1">Openingsuren</h4>
                             <ul className="text-text-muted text-sm space-y-1">
-                                <li className="flex justify-between w-48"><span>Mon - Fri</span> <span>11:00 AM - 10:00 PM</span></li>
-                                <li className="flex justify-between w-48"><span>Sat - Sun</span> <span>10:00 AM - 11:00 PM</span></li>
+                                <li className="flex justify-between w-48"><span>Ma. - Vr.</span> <span>11:00 - 22:00</span></li>
+                                <li className="flex justify-between w-48"><span>Za. - Zo.</span> <span>10:00 - 23:00</span></li>
                             </ul>
                         </div>
                     </div>
@@ -68,7 +68,7 @@ const RestaurantInfoModal = ({ isOpen, onClose, name }: { isOpen: boolean; onClo
                         </div>
                         <div>
                             <h4 className="font-bold text-text-main text-sm uppercase tracking-wide mb-1">Contact</h4>
-                            <p className="text-text-muted text-sm">(555) 123-4567</p>
+                            <p className="text-text-muted text-sm">(+32) 0470 123 456</p>
                             <p className="text-text-muted text-sm">hello@{window.location.host}</p>
                         </div>
                     </div>
@@ -76,7 +76,7 @@ const RestaurantInfoModal = ({ isOpen, onClose, name }: { isOpen: boolean; onClo
 
                 {/* Footer */}
                 <div className="p-4 bg-[var(--color-bg-app)] border-t border-border text-center">
-                    <BrandButton fullWidth onClick={onClose}>Close Info</BrandButton>
+                    <BrandButton fullWidth onClick={onClose}>Sluiten</BrandButton>
                 </div>
             </div>
         </div>
@@ -93,7 +93,7 @@ export const HeroSection: React.FC<HeroProps> = ({
     const [showInfo, setShowInfo] = useState(false);
 
     // Default fallback image
-    const bgImage = coverImage || "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=1600&q=80";
+    const bgImage = coverImage || "https://images.unsplash.com/photo-1543339308-43e59d6b73a6?q=80&w=2670&auto=format&fit=crop";
 
     // Layout Mode logic
     const layoutMode = {
@@ -206,7 +206,7 @@ export const HeroSection: React.FC<HeroProps> = ({
 
                         {/* Right: Organic Shape Image */}
                         <div className="order-1 md:order-2 relative">
-                            <div className={`aspect-[4/3] rounded-[var(--radius-lg)] overflow-hidden shadow-depth rotate-1 hover:rotate-0 transition-transform duration-500 z-10 relative ${preset === 'stelly' ? 'border border-gray-200 shadow-2xl' : ''}`}>
+                            <div className={`aspect-[4/3] rounded-[var(--radius-lg)] overflow-hidden shadow-depth z-10 relative ${preset === 'stelly' ? 'border border-gray-200 shadow-2xl' : ''}`}>
                                 <img src={bgImage} className="w-full h-full object-cover" alt="Hero" />
 
                                 {/* Overlay Card */}

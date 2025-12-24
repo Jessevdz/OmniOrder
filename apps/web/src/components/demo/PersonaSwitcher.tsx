@@ -35,9 +35,9 @@ export const PersonaSwitcher: React.FC<PersonaSwitcherProps> = ({ currentPreset,
     }, [showThemes]);
 
     const tabs = [
-        { id: 'split', label: 'Omni View', path: '/demo/split', icon: SplitSquareVertical },
-        { id: 'store', label: 'Storefront', path: '/demo/store', icon: Store },
-        { id: 'kds', label: 'Kitchen', path: '/demo/kitchen', icon: ChefHat },
+        { id: 'split', label: 'Naast elkaar', path: '/demo/split', icon: SplitSquareVertical },
+        { id: 'store', label: 'Website', path: '/demo/store', icon: Store },
+        { id: 'kds', label: 'Keuken', path: '/demo/kitchen', icon: ChefHat },
         { id: 'admin', label: 'Manager', path: '/demo/admin/dashboard', icon: Settings },
     ];
 

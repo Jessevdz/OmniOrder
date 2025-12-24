@@ -26,10 +26,10 @@ const ALERT_SOUND = "data:audio/mp3;base64,//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqq
 
 // Lane Configuration
 const LANES = [
-    { id: 'PENDING', label: 'New Orders', color: 'border-blue-500/50' },
+    { id: 'PENDING', label: 'Bestellingen', color: 'border-blue-500/50' },
     { id: 'QUEUED', label: 'To Do', color: 'border-yellow-500/50' },
-    { id: 'PREPARING', label: 'Cooking', color: 'border-orange-500/50' },
-    { id: 'READY', label: 'Done / Pick Up', color: 'border-green-500/50' },
+    { id: 'PREPARING', label: 'Koken', color: 'border-orange-500/50' },
+    { id: 'READY', label: 'Klaar / Ophalen', color: 'border-green-500/50' },
 ];
 
 export function KitchenDisplay() {
@@ -164,10 +164,9 @@ export function KitchenDisplay() {
     if (!isActive) {
         return (
             <div className="bg-neutral-950 h-screen text-white flex flex-col items-center justify-center gap-8">
-                <ChefHat size={80} className="text-primary" />
+                <ChefHat size={80} className="text-blue-500" />
                 <div className="text-center">
-                    <h1 className="text-4xl font-bold mb-2">Kitchen Display System</h1>
-                    <p className="text-gray-400 text-lg">Station: {config.name}</p>
+                    <h1 className="text-4xl font-bold mb-2">Keukendisplay</h1>
                 </div>
                 <button
                     onClick={enableSystem}
@@ -175,7 +174,6 @@ export function KitchenDisplay() {
                 >
                     START SHIFT
                 </button>
-                <p className="text-gray-500 text-sm mt-4">Enables Audio Alerts & Always-On Screen</p>
             </div>
         );
     }
@@ -186,7 +184,7 @@ export function KitchenDisplay() {
             <header className="bg-neutral-900 border-b border-gray-800 p-4 flex justify-between items-center h-16 shadow-md shrink-0">
                 <div className="flex items-center gap-4">
                     <h1 className="text-xl font-bold tracking-wider text-gray-200">
-                        OMNI<span className="text-primary">KDS</span>
+                        KEUKEN
                     </h1>
                     <span className="bg-gray-800 text-gray-400 px-3 py-1 rounded text-sm font-mono border border-gray-700">
                         {config.name}
@@ -195,7 +193,7 @@ export function KitchenDisplay() {
 
                 <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2">
-                        <span className="text-gray-400 text-sm uppercase tracking-widest font-bold">Ticket Count:</span>
+                        <span className="text-gray-400 text-sm uppercase tracking-widest font-bold">Bestellingen:</span>
                         <span className="text-2xl font-black text-white">{orders.length}</span>
                     </div>
                     <div className="h-6 w-px bg-gray-700"></div>

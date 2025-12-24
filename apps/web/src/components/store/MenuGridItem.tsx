@@ -26,7 +26,7 @@ export const MenuGridItem: React.FC<MenuItemProps> = ({ item, onAdd, preset = 'm
                             onAdd(item);
                         }}
                     >
-                        Add +${(item.price / 100).toFixed(2)}
+                        Add ${(item.price / 100).toFixed(2)}
                     </BrandButton>
                 </div>
             );
