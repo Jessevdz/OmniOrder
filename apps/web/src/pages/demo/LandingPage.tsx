@@ -11,7 +11,8 @@ import {
     Zap,
     CheckCircle2,
     ShieldCheck,
-    MousePointerClick
+    MousePointerClick,
+    Check
 } from 'lucide-react';
 
 export const LandingPage = () => {
@@ -175,7 +176,7 @@ export const LandingPage = () => {
                                     <div>
                                         <h3 className="font-bold text-slate-900 text-lg mb-1">Transparante Pricing</h3>
                                         <p className="text-slate-500 text-sm leading-relaxed">
-                                            Geen vaste maandelijkse kosten. Je betaalt slechts <strong>1%</strong> per transactie, de laagste commissie op de markt.
+                                            Geen vaste maandelijkse kosten. Je betaalt slechts <strong>1%</strong> per bestelling, de laagste commissie op de markt.
                                         </p>
                                     </div>
                                 </div>
@@ -244,23 +245,55 @@ export const LandingPage = () => {
                     </div>
                 </section>
 
-                {/* --- Trust / Simplicity Bar --- */}
-                <section className="bg-slate-50 border-y border-slate-100 py-16">
-                    <div className="max-w-4xl mx-auto px-6 text-center">
-                        <h2 className="text-2xl font-bold text-slate-900 mb-8">Groei zonder risico</h2>
-                        <div className="flex flex-wrap justify-center gap-4 md:gap-12">
-                            <div className="flex items-center gap-2 text-slate-600 font-medium bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm">
-                                <CheckCircle2 className="text-blue-600" size={20} />
-                                <span>Geen opstartkosten</span>
+                {/* --- Pricing / Risk Free Section --- */}
+                <section className="bg-slate-900 py-24 relative overflow-hidden">
+                    {/* Background decoration */}
+                    <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3"></div>
+                    <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[100px] translate-y-1/3 -translate-x-1/3"></div>
+
+                    <div className="max-w-5xl mx-auto px-6 relative z-10">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+
+                            {/* Left: Value Prop */}
+                            <div>
+                                <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+                                    Transparant en eerlijk. <br />
+                                    <span className="text-blue-400">Betaal enkel voor gebruik.</span>
+                                </h2>
+
+                                <ul className="space-y-4">
+                                    {[
+                                        "Geen opstartkosten",
+                                        "Geen maandelijkse abonnementskosten",
+                                        "Geen vaste contracten (maandelijks opzegbaar)",
+                                        "Inclusief hosting & updates"
+                                    ].map((item, idx) => (
+                                        <li key={idx} className="flex items-center gap-3 text-slate-200">
+                                            <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
+                                                <Check size={14} className="text-blue-400" strokeWidth={3} />
+                                            </div>
+                                            <span className="font-medium">{item}</span>
+                                        </li>
+                                    ))}
+                                </ul>
                             </div>
-                            <div className="flex items-center gap-2 text-slate-600 font-medium bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm">
-                                <CheckCircle2 className="text-blue-600" size={20} />
-                                <span>Geen maandelijkse kosten</span>
+
+                            {/* Right: The "Card" */}
+                            <div className="relative">
+                                <div className="absolute inset-0 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-3xl blur-xl opacity-20"></div>
+                                <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-3xl p-8 md:p-12 text-center relative hover:border-blue-500/30 transition-colors">
+
+                                    <div className="text-slate-400 font-medium mb-2 uppercase tracking-widest text-sm">Commissie</div>
+                                    <div className="flex items-baseline justify-center gap-1 mb-4">
+                                        <span className="text-7xl md:text-8xl font-black text-white tracking-tighter">1</span>
+                                        <span className="text-4xl md:text-5xl font-bold text-blue-400">%</span>
+                                    </div>
+                                    <p className="text-slate-300 max-w-xs mx-auto mb-8">
+                                        Per bestelling. <br />
+                                    </p>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2 text-slate-600 font-medium bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm">
-                                <ShieldCheck className="text-blue-600" size={20} />
-                                <span>1% bestelcommissie</span>
-                            </div>
+
                         </div>
                     </div>
                 </section>
