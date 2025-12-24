@@ -1,75 +1,120 @@
-# The Omni-View Demo Experience
+# The Stelly Demo Experience
 
-## 1. Overview
+## 1. Executive Summary
 
-The **Omni-View Demo** is a specialized architectural mode designed to demonstrate the full capabilities of the Stelly platform in a single, frictionless session. 
+The **Stelly Demo** is a high-fidelity sales and engineering showcase. Unlike typical static demos, Stelly utilizes an **Ephemeral Sandbox Architecture**.
 
-Instead of requiring users to log in as different users (Customer, Manager, Kitchen Staff) across different subdomains, the Demo Mode creates a **Unified Shell** that renders these contexts side-by-side or allows instant toggling between them.
+When a prospective user initiates a demo, the platform instantly provisions a **dedicated, isolated PostgreSQL schema** specifically for that session. This allows every user to create orders, change settings, and test the KDS in a private environment without seeing data from other concurrent demo users.
 
-**Access URL:** `http://demo.stelly.localhost/demo/split`
+**Entry Point:** `http://demo.stelly.localhost`
 
 ---
 
-## 2. Key Features
+## 2. User Journey & Features
 
-### A. The "Magic" Authentication
-The demo environment bypasses the standard Authentik SSO flow. 
-* **Mechanism:** When the frontend loads, it requests a "Magic Token" from `POST /api/v1/sys/demo-login` using a hardcoded internal access code (`OMNI2025`).
-* **Result:** The user is instantly logged in as `demo_admin`, granting full access to the backend without credential entry.
+### A. Lead Capture & Instant Provisioning
+1. **The Gate:** Users land on a "Magic Login" page requiring their Name and Email.
+2. **The Provisioning:** Upon submission, the backend performs a "Lead Generation" transaction:
+    * Records the lead in the public database.
+    * Generates a unique session ID (e.g., `demo_8f2a9c`).
+    * Executes DDL to create a new Postgres Schema (`CREATE SCHEMA demo_8f2a9c`).
+    * Seeds the schema with the "Omni Bistro" menu data.
+3. **The Magic Token:** The user receives a JWT signed with a custom claim (`target_schema`), granting them admin access to *only* their specific sandbox.
 
-### B. Split-Screen View
-The centerpiece of the demo is the **Split View**.
-* **Left Pane:** Renders the **Public Storefront** (Mobile Context).
-* **Right Pane:** Renders the **Kitchen Display System** (Tablet Context).
-* **Interaction:** Placing an order on the left immediately triggers a WebSocket event on the right, providing instant visual confirmation of the real-time architecture.
+### B. The Split-Screen "God Mode"
+Once logged in, the user is presented with the **Split View**, rendering two distinct applications side-by-side:
+* **Left Pane (Storefront):** The consumer view. It enables "Quick Bundles" to rapidly populate the cart.
+* **Right Pane (KDS):** The operator view. It connects via WebSocket to the user's specific schema channel.
 
-### C. Live Theme Injection
-A floating **Paintbrush Widget** allows users to hot-swap the tenant's branding configuration.
-* **Function:** Sends a `PUT` request to update `tenant_demo` settings and instantly re-applies CSS tokens (`--color-primary`, `--radius-lg`, etc.).
-* **Presets:**
-    * **Mono Luxe:** High-end steakhouse vibe (Black/White, Sharp corners).
-    * **Fresh Market:** Salad bar vibe (Green/Orange, Round corners).
-    * **Tech Ocean:** Ghost kitchen vibe (Dark Mode, Blue accents).
+### C. Live Brand Injection
+A floating **Persona Switcher** allows the user to radically alter the frontend architecture in real-time.
+* **Mechanism:** Clicking a preset sends a `PUT` request to the ephemeral tenant config.
+* **The "Vibes":**
+    * **Mono Luxe:** Sharp edges, Serif fonts, high-end steakhouse feel.
+    * **Fresh Market:** Soft radii, vibrant greens, frosted glass, salad bar feel.
+    * **Tech Ocean:** Dark mode, blue accents, ghost kitchen feel.
 
 ### D. The Reset Switch
-A **Reset Button** (Rotate Icon) in the bottom navigation bar restores the environment to its initial state:
-1. Truncates the `orders` table for the demo tenant.
-2. Resets the Theme Config to "Mono Luxe".
-3. Resets the Onboarding Tour state.
+Users can "wipe" their session at any time using the Reset button. This triggers a backend truncation of the `orders` table within their specific schema, returning the KDS to a blank slate without affecting other users.
 
 ---
 
-## 3. How to Use the Demo
+## 3. Technical Architecture
 
-### Prerequisites
-Ensure your local environment is running and `demo.stelly.localhost` points to `127.0.0.1`.
+The Demo architecture differs significantly from the standard production tenant architecture to support high-velocity, disposable sessions.
 
-### The Narrative Flow
+### Architecture Diagram
 
-1. **Enter the Shell:** Navigate to `http://demo.stelly.localhost/demo/split`.
-2. **The Tour:** A "Glass Modal" overlay will guide you.
-    * *Step 1:* Highlights the Storefront (Customer View).
-    * *Step 2:* Highlights the KDS (Kitchen View).
-3. **Place an Order:**
-    * Use the **"Quick Add"** banner on the menu to instantly add a full meal bundle.
-    * Open the Cart Drawer and click "Confirm Order".
-4. **Watch the Reaction:**
-    * Observe the KDS on the right immediately display the new ticket with a "Ding" sound.
-5. **Change the Vibe:**
-    * Click the **Paintbrush** icon in the top right.
-    * Select **"Fresh Market"**.
-    * Observe how fonts, colors, and border radii change instantly without a page reload.
+
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Web as React App
+    participant API as FastAPI
+    participant DB as PostgreSQL
+
+    User->>Web: Submits Name/Email
+    Web->>API: POST /sys/generate-demo-session
+    
+    rect rgb(240, 248, 255)
+        note right of API: Provisioning Phase
+        API->>DB: INSERT INTO leads (public)
+        API->>DB: CREATE SCHEMA demo_xyz
+        API->>DB: Seed Tables (Items, Categories)
+    end
+
+    API-->>Web: Return JWT { target_schema: "demo_xyz" }
+    
+    note over User, Web: Session Active
+    
+    User->>Web: Places Order
+    Web->>API: POST /orders (Bearer JWT)
+    
+    rect rgb(255, 240, 240)
+        note right of API: Context Resolution
+        API->>API: Decode JWT -> Read 'target_schema'
+        API->>DB: SET search_path TO demo_xyz
+        API->>DB: INSERT INTO orders...
+    end
+
+```
+
+### Key Components
+
+#### 1. Dynamic Context Switching (`deps.py`)
+
+In standard production, Stelly resolves the tenant based on the `Host` header (e.g., `pizza.localhost`).
+In Demo Mode, the `get_current_user` dependency detects the **Magic Token**. If the token contains a `target_schema` claim, it overrides the host-based resolution and forces the database connection to the specific demo schema.
+
+#### 2. Ephemeral Schema Management
+
+* **Creation:** Handled in `apps/api/app/api/v1/sys.py`. It uses raw SQL to clone the structure of the demo environment rapidly.
+* **Performance:** Because demo schemas are small and isolated, provisioning takes milliseconds.
+* **Cleanup (Future):** A background worker (Celery/Cron) can scan for `demo_*` schemas older than 24 hours and `DROP CASCADE` to free up resources.
+
+#### 3. WebSocket Isolation
+
+The WebSocket manager (`socket.py`) groups connections by `schema_name`.
+
+* User A (Schema `demo_123`) places an order -> Broadcasts only to `demo_123`.
+* User B (Schema `demo_456`) places an order -> Broadcasts only to `demo_456`.
+This ensures that two sales prospects using the demo simultaneously never see each other's data.
 
 ---
 
-## 4. Technical Architecture
+## 4. How to Test (Local Dev)
 
-### Backend Overrides (`TenantMiddleware`)
-Usually, the API resolves the tenant based on the subdomain (e.g., `pizza` -> `tenant_pizzahut`). 
-In Demo Mode, if the host is `demo.stelly.localhost`, the middleware **forces** the database search path to `tenant_demo`, regardless of other contexts.
+1. **Navigate:** Go to `http://demo.stelly.localhost` (Ensure this maps to `127.0.0.1` in `/etc/hosts`).
+2. **Onboard:** Enter any name (e.g., "Reviewer") and email.
+3. **Verify:**
+* Check the URL; you are now inside the demo shell.
+* Open your database tool (e.g., Adminer at `localhost:8080`).
+* You should see a new schema named `demo_<random_hex>` populated with tables.
 
-### Frontend Shell (`DemoLayout`)
-The `DemoLayout` wrapper handles the persistence of the session. It includes the `PersonaSwitcher` component, which uses React Router to swap views (`/demo/store`, `/demo/kitchen`, `/demo/admin`) while keeping the layout state (like the Magic Token) alive.
 
-### Data Seeding
-The demo tenant relies on specific seed data found in `apps/api/app/core/seed_internal.py`. This includes high-fidelity images and descriptions specifically chosen to look good across all three theme presets.
+4. **Interact:**
+* Place an order on the left.
+* Watch it appear on the right.
+* Switch the theme to "Tech Ocean".
+* Refresh the page (Session persistence is handled via `sessionStorage` keeping the JWT).
