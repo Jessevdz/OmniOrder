@@ -1,10 +1,10 @@
-# OmniOrder
+# Stelly
 
 **A White-Label, Managed Micro-SaaS for Restaurant Order Management.**
 
 ## 1. Developer Quickstart
 
-Follow these steps to get the OmniOrder Monorepo running locally using Docker and the provided validation scripts.
+Follow these steps to get the Stelly Monorepo running locally using Docker and the provided validation scripts.
 
 ### Prerequisites
 * Docker & Docker Compose
@@ -12,14 +12,14 @@ Follow these steps to get the OmniOrder Monorepo running locally using Docker an
 * Node.js 18+ (optional, if running frontend outside Docker)
 
 ### Step 1: Configure Local DNS
-Since OmniOrder relies on subdomain/custom domain routing (e.g., `pizza.localhost`), you must map these domains to your local machine.
+Since Stelly relies on subdomain/custom domain routing (e.g., `pizza.localhost`), you must map these domains to your local machine.
 
 Add the following to your `/etc/hosts` (macOS/Linux) or `C:\Windows\System32\drivers\etc\hosts` (Windows):
 
 ```text
 127.0.0.1   pizza.localhost
 127.0.0.1   burger.localhost
-127.0.0.1   omniorder.localhost
+127.0.0.1   stelly.localhost
 
 ```
 
@@ -60,11 +60,11 @@ Once the stack is up and the script has passed:
 
 ## 2. Product Vision
 
-**OmniOrder** is a production-grade, rapid-deployment order management platform designed for scale, isolation, and seamless branding.
+**Stelly** is a production-grade, rapid-deployment order management platform designed for scale, isolation, and seamless branding.
 
-Unlike generic platforms, OmniOrder offers a **fully white-labeled experience**. The platform administrator can "spin up" a new restaurant instance instantly. Critical to our value proposition is that we support **Custom Domains** (e.g., `order.joespizza.com`) alongside subdomains, with the frontend automatically adapting to the restaurant's brand identity (colors, fonts, logos) and hardware environment.
+Unlike generic platforms, Stelly offers a **fully white-labeled experience**. The platform administrator can "spin up" a new restaurant instance instantly. Critical to our value proposition is that we support **Custom Domains** (e.g., `order.joespizza.com`) alongside subdomains, with the frontend automatically adapting to the restaurant's brand identity (colors, fonts, logos) and hardware environment.
 
-## 3. The OmniOrder Ecosystem (Stakeholders)
+## 3. The Stelly Ecosystem (Stakeholders)
 
 The platform is divided into four distinct interaction contexts, each catering to a specific user persona within the tenant lifecycle.
 

@@ -8,9 +8,9 @@ AUTHENTIK_URL = "http://auth.localhost/api/v3"
 # 3. Copy the token here:
 API_TOKEN = "Bearer EVqqNkwqlSJWpzqMaodEJnKdJPUgJACvxiCQ9TPxrVQCSS1qQNCu6eiSEkLs"
 
-APP_SLUG = "omniorder"
-PROVIDER_NAME = "OmniOrder Provider"
-CLIENT_ID = "omniorder-web"
+APP_SLUG = "stelly"
+PROVIDER_NAME = "Stelly Provider"
+CLIENT_ID = "stelly-web"
 
 # Multi-Tenant Groups to Create
 GROUPS = ["Super Admins", "Pizza Hut Staff", "Burger King Staff"]
@@ -152,14 +152,14 @@ def run():
             f"{AUTHENTIK_URL}/core/applications/",
             headers=headers,
             json={
-                "name": "OmniOrder",
+                "name": "Stelly",
                 "slug": APP_SLUG,
                 "provider": provider_id,
-                "meta_launch_url": "http://admin.omniorder.localhost/platform",
+                "meta_launch_url": "http://admin.stelly.localhost/platform",
             },
         )
         if res.status_code == 201:
-            print(f"✅ Created Application: OmniOrder")
+            print(f"✅ Created Application: Stelly")
         else:
             print(f"❌ Failed to create application: {res.text}")
     else:

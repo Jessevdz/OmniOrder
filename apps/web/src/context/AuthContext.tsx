@@ -2,8 +2,8 @@ import React from 'react';
 import { AuthProvider as OidcProvider, useAuth as useOidcAuth, AuthProviderProps } from "react-oidc-context";
 
 const oidcConfig: AuthProviderProps = {
-    authority: "http://auth.localhost/application/o/omniorder/",
-    client_id: "omniorder-web",
+    authority: "http://auth.localhost/application/o/stelly/",
+    client_id: "stelly-web",
     redirect_uri: window.location.origin + "/admin/dashboard",
     onSigninCallback: () => {
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -39,7 +39,7 @@ export const useAuth = () => {
             user: {
                 profile: {
                     name: "Demo Admin",
-                    email: "demo@omniorder.localhost",
+                    email: "demo@stelly.localhost",
                     sub: "demo_admin"
                 },
                 access_token: demoToken

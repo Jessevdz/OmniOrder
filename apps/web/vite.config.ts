@@ -10,8 +10,8 @@ export default defineConfig({
         allowedHosts: [
             'pizza.localhost',
             'burger.localhost',
-            'omniorder.localhost',
-            'admin.omniorder.localhost',
+            'stelly.localhost',
+            'admin.stelly.localhost',
             'all' // Or just use 'all' to disable the check entirely for dev
         ],
         watch: {

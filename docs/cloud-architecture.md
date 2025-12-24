@@ -1,8 +1,8 @@
-# OmniOrder: Azure Cloud Architecture
+# Stelly: Azure Cloud Architecture
 
 ## 1. Executive Summary
 
-This document outlines the production cloud infrastructure for OmniOrder hosted on **Microsoft Azure**.
+This document outlines the production cloud infrastructure for Stelly hosted on **Microsoft Azure**.
 
 The architecture transitions from the local Docker Compose environment to a scalable, serverless-first PaaS (Platform as a Service) model. This design prioritizes cost-efficiency (scaling to zero), strict security (VNet isolation), and global performance (CDN edging).
 
@@ -11,7 +11,7 @@ The architecture transitions from the local Docker Compose environment to a scal
 * **Frontend:** Moved to **Azure Static Web Apps (SWA)** for global distribution and automated CI/CD.
 * **Backend:** Hosted on **Azure Container Apps (ACA)** to allow serverless scaling based on HTTP traffic and event triggers.
 * **Database:** **Azure Database for PostgreSQL (Flexible Server)** facilitates the "Schema-per-Tenant" pattern with connection pooling.
-* **Edge Routing:** **Azure Front Door** acts as the global entry point, handling SSL termination for wildcard domains (`*.omniorder.com`) and routing traffic based on path (`/` vs `/api`).
+* **Edge Routing:** **Azure Front Door** acts as the global entry point, handling SSL termination for wildcard domains (`*.stelly.com`) and routing traffic based on path (`/` vs `/api`).
 
 ---
 
@@ -39,8 +39,8 @@ graph TD
         Blob[Azure Blob Storage]
     end
 
-    User -->|https://pizza.omniorder.com| AFD
-    DNS -.->|CNAME *.omniorder.com| AFD
+    User -->|https://pizza.stelly.com| AFD
+    DNS -.->|CNAME *.stelly.com| AFD
 
     %% Routing Logic
     AFD -->|Path: /*| SWA
@@ -70,23 +70,23 @@ graph TD
 | **API (FastAPI)** | **Container Apps** | Consumption Plan. KEDA enabled for scaling. Ingress set to "External". |
 | **Postgres** | **PostgreSQL Flex** | Burstable (B-series) for Dev, General Purpose (D-series) for Prod. High Availability enabled. |
 | **Redis** | **Azure Redis** | Basic (C0/C1) for Dev, Standard for Prod. |
-| **MinIO** | **Blob Storage** | Standard General Purpose V2. Public container for `omniorder-assets`. |
+| **MinIO** | **Blob Storage** | Standard General Purpose V2. Public container for `stelly-assets`. |
 
 ---
 
 ## 4. Routing & Multi-Tenancy Strategy
 
-Routing is the most critical aspect of the OmniOrder architecture. The backend middleware relies on the `Host` header (e.g., `pizza.omniorder.com`) to determine which database schema (`tenant_pizza`) to access.
+Routing is the most critical aspect of the Stelly architecture. The backend middleware relies on the `Host` header (e.g., `pizza.stelly.com`) to determine which database schema (`tenant_pizza`) to access.
 
 ### The Challenge
 
-Cloud load balancers and proxies often strip the original `Host` header and replace it with the origin host (e.g., `omniorder-api.azurecontainerapps.io`).
+Cloud load balancers and proxies often strip the original `Host` header and replace it with the origin host (e.g., `stelly-api.azurecontainerapps.io`).
 
 ### The Azure Solution: Front Door
 
 We use **Azure Front Door** as the Layer 7 Load Balancer to solve this:
 
-1. **Wildcard DNS:** A CNAME record for `*.omniorder.com` points to the Front Door endpoint.
+1. **Wildcard DNS:** A CNAME record for `*.stelly.com` points to the Front Door endpoint.
 2. **Origin Groups:**
 * **Frontend Origin:** Points to the Static Web App.
 * **Backend Origin:** Points to the Container App.
@@ -101,15 +101,15 @@ We use **Azure Front Door** as the Layer 7 Load Balancer to solve this:
 
 #### Request Lifecycle Example
 
-1. User visits `burger.omniorder.com/menu`.
+1. User visits `burger.stelly.com/menu`.
 2. **Front Door** receives request.
 3. Matches **Rule B** (Static). Forwards to SWA.
 4. Browser loads React App.
-5. React App makes XHR to `https://burger.omniorder.com/api/v1/store/menu`.
+5. React App makes XHR to `https://burger.stelly.com/api/v1/store/menu`.
 6. **Front Door** receives request.
 7. Matches **Rule A** (API).
 8. Forwards to **Container App**.
-* **Crucial:** Sends `Host: burger.omniorder.com`.
+* **Crucial:** Sends `Host: burger.stelly.com`.
 
 
 9. **FastAPI Middleware** extracts `burger` from host.
@@ -124,7 +124,7 @@ We use **Azure Front Door** as the Layer 7 Load Balancer to solve this:
 
 We use Azure Blob Storage to store menu images.
 
-* **Container Name:** `omniorder-assets`.
+* **Container Name:** `stelly-assets`.
 * **Access Level:** `Blob` (Anonymous read access for public delivery).
 * **Integration:**
 * The `boto3` library used in `core/storage.py` is compatible with Azure Blob Storage via the [Azure Storage Proxy](https://www.google.com/search?q=https://github.com/Azure/azure-storage-gateway) or by refactoring `storage.py` to use `azure-storage-blob` SDK (Recommended for production).

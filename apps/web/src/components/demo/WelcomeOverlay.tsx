@@ -19,7 +19,7 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({ currentStep, onS
 
     const content = [
         {
-            title: "Welcome to OmniOrder",
+            title: "Welcome to Stelly",
             text: "This is a live demonstration of a multi-tenant ordering platform. You are about to experience how different personas interact in real-time.",
             icon: <MonitorPlay size={48} className="text-blue-500" />,
             action: "Start Tour"

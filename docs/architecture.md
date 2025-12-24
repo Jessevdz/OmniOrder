@@ -1,6 +1,6 @@
-# OmniOrder Architecture
+# Stelly Architecture
 
-**OmniOrder** is a white-label, multi-tenant SaaS platform designed for high-scale restaurant order management. It employs a **"Schema-per-Tenant"** database strategy for strict data isolation and a **"Chameleon" frontend architecture** that dynamically adapts branding (colors, fonts, layouts) based on the accessing domain.
+**Stelly** is a white-label, multi-tenant SaaS platform designed for high-scale restaurant order management. It employs a **"Schema-per-Tenant"** database strategy for strict data isolation and a **"Chameleon" frontend architecture** that dynamically adapts branding (colors, fonts, layouts) based on the accessing domain.
 
 ## 1. High-Level Infrastructure
 
@@ -79,7 +79,7 @@ The backend is built on **FastAPI** and **SQLAlchemy**, utilizing a middleware-d
 
 4. **Media Storage (S3/MinIO):**
 * **Endpoint:** `POST /api/v1/media/upload`.
-* **Isolation:** While the bucket (`omniorder-assets`) is shared, file references are stored strictly within the tenant's schema (`menu_items.image_url`).
+* **Isolation:** While the bucket (`stelly-assets`) is shared, file references are stored strictly within the tenant's schema (`menu_items.image_url`).
 * **Implementation:** Uses `boto3` to stream uploads to the internal MinIO container and returns a public-facing URL accessible via the browser.
 
 

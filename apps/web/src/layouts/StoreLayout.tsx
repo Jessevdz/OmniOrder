@@ -43,7 +43,7 @@ export const StoreLayout = () => {
 
             <footer className="text-center text-text-muted text-sm py-8 border-t border-border">
                 <p>© {new Date().getFullYear()} {config.name}</p>
-                <p className="text-xs mt-1 opacity-60">Powered by OmniOrder</p>
+                <p className="text-xs mt-1 opacity-60">Powered by Stelly</p>
             </footer>
 
             <CartDrawer />

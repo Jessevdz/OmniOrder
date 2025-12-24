@@ -27,7 +27,7 @@ DEMO_TENANT_SEED = {
         "primary_color": "#000000",
         "font_family": "Inter",
         "address": "101 Demo Lane, Tech City",
-        "email": "demo@omniorder.localhost",
+        "email": "demo@stelly.localhost",
         "phone": "(555) 019-2834",
         "operating_hours": [
             {"label": "Mon-Fri", "time": "11:00 AM - 10:00 PM"},

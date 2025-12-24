@@ -196,7 +196,7 @@ def demo_login(payload: dict = Body(...)):
         "token_type": "bearer",
         "user": {
             "name": "Demo Administrator",
-            "email": "demo@omniorder.localhost",
+            "email": "demo@stelly.localhost",
             "role": "admin",
         },
     }
@@ -248,7 +248,7 @@ def reset_demo_data(
                 "font_family": "Inter",
                 "address": "101 Demo Lane, Tech City",
                 "phone": "(555) 019-2834",
-                "email": "demo@omniorder.localhost",
+                "email": "demo@stelly.localhost",
                 "operating_hours": [
                     {"label": "Mon-Fri", "time": "11:00 AM - 10:00 PM"},
                     {"label": "Weekends", "time": "10:00 AM - 11:00 PM"},

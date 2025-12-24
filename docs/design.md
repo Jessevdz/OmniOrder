@@ -1,8 +1,8 @@
-# OmniOrder Visual Design & Experience Vision
+# Stelly Visual Design & Experience Vision
 
 ## 1. Core Philosophy: "The Chameleon Engine"
 
-OmniOrder is not a single app with a static design; it is a **structural canvas** that accepts a **brand injection**.
+Stelly is not a single app with a static design; it is a **structural canvas** that accepts a **brand injection**.
 
 The core design principle is **Semantic Abstraction**. We do not design with "Red" or "Blue"; we design with `Primary` and `Secondary`. We do not design with "Rounded Corners"; we design with `Radius-Token`.
 
@@ -48,7 +48,7 @@ These tokens control the "vibe" of the interface:
 
 ## 3. Contextual Experience Models
 
-OmniOrder serves four distinct personas. Each has a specific visual dialect.
+Stelly serves four distinct personas. Each has a specific visual dialect.
 
 ### A. The Public Storefront (The "Stage")
 
@@ -97,7 +97,7 @@ OmniOrder serves four distinct personas. Each has a specific visual dialect.
 
 ## 4. Thematic Presets (The "Skins")
 
-While tenants can override individual colors, OmniOrder provides three curated "Vibes" defined in `utils/theme.ts`.
+While tenants can override individual colors, Stelly provides three curated "Vibes" defined in `utils/theme.ts`.
 
 ### 1. Mono Luxe
 

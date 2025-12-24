@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary
 
-OmniOrder uses **OpenID Connect (OIDC)** via **Authentik** for all identity management. 
+Stelly uses **OpenID Connect (OIDC)** via **Authentik** for all identity management. 
 
 Instead of managing passwords locally, we federate identity. The backend (FastAPI) is stateless, verifying JWT signatures via JWKS. The frontend (React) uses the Authorization Code flow with PKCE.
 
@@ -93,8 +93,8 @@ python scripts/setup_auth.py
 The script performs the following idempotent actions via the Authentik API:
 
 1. **Creates Scope Mapping:** Defines a custom scope named `groups` that injects the user's Authentik groups into the JWT.
-2. **Creates Provider:** Sets up the OAuth2 provider with `omniorder-web` Client ID and wildcard redirect URIs for localhost subdomains. It attaches the `groups` scope automatically.
-3. **Creates Application:** Creates the "OmniOrder" app and links it to the Provider.
+2. **Creates Provider:** Sets up the OAuth2 provider with `stelly-web` Client ID and wildcard redirect URIs for localhost subdomains. It attaches the `groups` scope automatically.
+3. **Creates Application:** Creates the "Stelly" app and links it to the Provider.
 4. **Creates Groups:**
 * `Super Admins`
 * `Pizza Hut Staff`
@@ -105,7 +105,7 @@ The script performs the following idempotent actions via the Authentik API:
 
 | User | Password | Group | Access |
 | --- | --- | --- | --- |
-| `jesse_admin` | `password` | Super Admins | `admin.omniorder.localhost` |
+| `jesse_admin` | `password` | Super Admins | `admin.stelly.localhost` |
 | `pizza_manager` | `password` | Pizza Hut Staff | `pizza.localhost` |
 | `burger_manager` | `password` | Burger King Staff | `burger.localhost` |
 
@@ -115,8 +115,8 @@ The script performs the following idempotent actions via the Authentik API:
 
 The frontend uses `react-oidc-context`. Configuration is located in `apps/web/src/context/AuthContext.tsx`.
 
-* **Authority:** `http://auth.localhost/application/o/omniorder/`
-* **Client ID:** `omniorder-web`
+* **Authority:** `http://auth.localhost/application/o/stelly/`
+* **Client ID:** `stelly-web`
 * **Redirect URI:** `window.location.origin + ...` (Dynamic based on current subdomain).
 
 ## 5. Backend Enforcement Details
@@ -126,4 +126,4 @@ The API (`apps/api/app/api/v1/deps.py`) enforces security using the token claims
 1. **JWKS Validation:** It fetches keys from `http://authentik-server:9000/...` (Internal Docker Network) to validate the signature.
 2. **Group Check (Recommended):**
 * If `Host: pizza.localhost`, the token **MUST** contain `Pizza Hut Staff` in the `groups` list.
-* If `Host: admin.omniorder.localhost`, the token **MUST** contain `Super Admins`.
+* If `Host: admin.stelly.localhost`, the token **MUST** contain `Super Admins`.

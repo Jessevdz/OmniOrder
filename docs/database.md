@@ -1,4 +1,4 @@
-# Database Design Document: OmniOrder
+# Database Design Document: Stelly
 
 ## 1. Executive Summary
 
@@ -6,7 +6,7 @@
 **Database Engine:** PostgreSQL 15+
 **Isolation Strategy:** **Schema-per-Tenant**
 
-OmniOrder utilizes a hybrid database architecture. It maintains a single **Public Schema** for global routing and tenant configuration, while utilizing distinct **Tenant Schemas** (`tenant_xyz`, `tenant_abc`) for all operational data (users, orders, menus).
+Stelly utilizes a hybrid database architecture. It maintains a single **Public Schema** for global routing and tenant configuration, while utilizing distinct **Tenant Schemas** (`tenant_xyz`, `tenant_abc`) for all operational data (users, orders, menus).
 
 ### Why Schema-per-Tenant?
 
@@ -230,7 +230,7 @@ Managing schema changes across 1 vs. 1,000 tenants is handled in `apps/api/alemb
 
 Binary assets (images) are not stored in PostgreSQL. They are offloaded to an S3-compatible object store (MinIO in local dev, AWS S3 in production).
 
-* **Storage Bucket:** `omniorder-assets` (Public Read Access).
+* **Storage Bucket:** `stelly-assets` (Public Read Access).
 * **File Naming:** UUID-based filenames to prevent collisions and ensure uniqueness.
 * **Database Reference:** The `menu_items` table stores the full public URL in the `image_url` column (VARCHAR).
 

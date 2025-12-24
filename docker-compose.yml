@@ -6,7 +6,7 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=omniorder
+      - POSTGRES_DB=stelly
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -22,7 +22,7 @@ services:
       - ./apps/api:/app
     environment:
       - POSTGRES_SERVER=db
-      - POSTGRES_DB=omniorder
+      - POSTGRES_DB=stelly
     depends_on:
       - db
       - minio
@@ -70,8 +70,8 @@ services:
   #   entrypoint: >
   #     /bin/sh -c "
   #     until (/usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin) do echo '...waiting...' && sleep 1; done;
-  #     /usr/bin/mc mb myminio/omniorder-assets --ignore-existing;
-  #     /usr/bin/mc anonymous set download myminio/omniorder-assets;
+  #     /usr/bin/mc mb myminio/stelly-assets --ignore-existing;
+  #     /usr/bin/mc anonymous set download myminio/stelly-assets;
   #     exit 0;
   #     "
 

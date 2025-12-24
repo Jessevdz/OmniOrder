@@ -14,7 +14,7 @@ export function LoginPage() {
                             <Hexagon className="text-blue-500" size={48} />
                         </div>
                     </div>
-                    <h1 className="text-2xl font-bold text-white tracking-tight">OmniOrder Admin</h1>
+                    <h1 className="text-2xl font-bold text-white tracking-tight">Stelly Admin</h1>
                     <p className="text-slate-400 text-sm mt-2">Secure Tenant Access</p>
                 </div>
 

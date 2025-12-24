@@ -1,10 +1,10 @@
-# OmniOrder: Vision & Value Proposition Strategy
+# Stelly: Vision & Value Proposition Strategy
 
 ## Executive Summary
 
-OmniOrder is not merely an online ordering tool; it is a **white-label digital infrastructure engine** designed to return brand sovereignty to restaurants.
+Stelly is not merely an online ordering tool; it is a **white-label digital infrastructure engine** designed to return brand sovereignty to restaurants.
 
-In a market dominated by aggregator marketplaces (which charge high commissions and dilute brand identity) and rigid SaaS templates (which make every restaurant look identical), OmniOrder introduces a third path: **The Chameleon Architecture.**
+In a market dominated by aggregator marketplaces (which charge high commissions and dilute brand identity) and rigid SaaS templates (which make every restaurant look identical), Stelly introduces a third path: **The Chameleon Architecture.**
 
 Our vision is to provide **Agency-Grade Branding** at **SaaS Scalability**. We allow a high-end steakhouse and a fast-casual juice bar to run on the exact same underlying technology stack, while offering their customers two radically different, immersive digital experiences.
 
@@ -14,11 +14,11 @@ Our vision is to provide **Agency-Grade Branding** at **SaaS Scalability**. We a
 
 **"Radical Brand Fidelity on a Shared Infrastructure."**
 
-OmniOrder creates a digital environment that molds itself to the restaurant's identity, rather than forcing the restaurant to conform to a template. By abstracting "Design" into "Data," we enable frictionless scaling for the platform while delivering bespoke experiences for the tenant.
+Stelly creates a digital environment that molds itself to the restaurant's identity, rather than forcing the restaurant to conform to a template. By abstracting "Design" into "Data," we enable frictionless scaling for the platform while delivering bespoke experiences for the tenant.
 
 ### The "Chameleon Engine" Differentiator
 
-Most platforms allow users to upload a logo and change a header color. OmniOrder changes the *physics* of the interface based on the brand "Vibe":
+Most platforms allow users to upload a logo and change a header color. Stelly changes the *physics* of the interface based on the brand "Vibe":
 
 * **For Fine Dining (Mono Luxe):** The interface becomes sharp, minimalistic, and cinematic. It emphasizes photography and elegance.
 * **For Fast Casual (Fresh Market):** The interface becomes rounded, organic, and friendly. It emphasizes speed and health.
@@ -32,7 +32,7 @@ Most platforms allow users to upload a logo and change a header color. OmniOrder
 
 **The Promise: Digital Sovereignty & Margin Recovery.**
 
-* **Own Your Traffic:** Unlike marketplaces that act as gatekeepers, OmniOrder allows restaurants to operate on their own custom domains (e.g., `order.joespizza.com`). This builds direct SEO value and brand equity.
+* **Own Your Traffic:** Unlike marketplaces that act as gatekeepers, Stelly allows restaurants to operate on their own custom domains (e.g., `order.joespizza.com`). This builds direct SEO value and brand equity.
 * **Agency Quality, SaaS Price:** Tenants receive a website that looks like it cost $50,000 to build, instantly provisioned for a monthly subscription.
 * **Data Isolation:** Your customer data, sales history, and menu logic are physically separated from other tenants in the database. This ensures bank-grade privacy and security (GDPR/CCPA compliance) out of the box.
 * **Commission Freedom:** By owning the ordering pipe, restaurants reclaim the 20-30% usually lost to delivery apps.
@@ -65,4 +65,4 @@ Most platforms allow users to upload a logo and change a header color. OmniOrder
 
 ## Conclusion
 
-OmniOrder is built on the belief that **scalability should not come at the cost of identity.** By solving the technical complexity of multi-tenancy and dynamic theming, we empower restaurants to stop renting their customers from aggregators and start owning their digital future.
+Stelly is built on the belief that **scalability should not come at the cost of identity.** By solving the technical complexity of multi-tenancy and dynamic theming, we empower restaurants to stop renting their customers from aggregators and start owning their digital future.

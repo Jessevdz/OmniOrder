@@ -24,7 +24,7 @@ export const LandingPage = () => {
     };
 
     // --- NEW SUBTLE LOGO COMPONENT ---
-    const SnackyLogo = ({ className = "" }: { className?: string }) => (
+    const StellyLogo = ({ className = "" }: { className?: string }) => (
         <div className={`flex items-center gap-2.5 cursor-pointer group ${className}`} onClick={() => navigate('/')}>
             {/* The Layered Hexagon Icon */}
             <div className="relative w-7 h-7">
@@ -47,7 +47,7 @@ export const LandingPage = () => {
                     strokeWidth={2.5}
                 />
             </div>
-            <span className="font-bold text-xl tracking-tight text-slate-900 leading-none mt-0.5">Snacky</span>
+            <span className="font-bold text-xl tracking-tight text-slate-900 leading-none mt-0.5">Stelly</span>
         </div>
     );
 
@@ -64,7 +64,7 @@ export const LandingPage = () => {
             <nav className="fixed w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 transition-all">
                 <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                     <div className="flex items-center gap-2 font-bold text-xl tracking-tight text-slate-900">
-                        <SnackyLogo />
+                        <StellyLogo />
                     </div>
                     <div className="flex items-center gap-6">
                         <button
@@ -342,7 +342,7 @@ export const LandingPage = () => {
                 {/* --- Footer --- */}
                 <footer className="pt-16 pb-10 text-center border-t border-slate-100 bg-white">
                     <div className="flex items-center justify-center gap-2 mb-6 opacity-80">
-                        <SnackyLogo />
+                        <StellyLogo />
                     </div>
                     <p className="text-slate-400 text-sm">
                         Gemaakt voor de Belgische horeca.

@@ -50,7 +50,7 @@ export const DemoLogin: React.FC<DemoLoginProps> = ({ onLogin }) => {
                     <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 mb-6 shadow-lg shadow-blue-900/20">
                         <MonitorPlay size={32} className="text-white" />
                     </div>
-                    <h1 className="text-3xl font-bold tracking-tight mb-2">OmniOrder Demo</h1>
+                    <h1 className="text-3xl font-bold tracking-tight mb-2">Stelly Demo</h1>
                     <p className="text-neutral-400">Enter the access code to initialize the multi-tenant simulation environment.</p>
                 </div>
 

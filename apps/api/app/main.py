@@ -25,4 +25,4 @@ app.include_router(media.router, prefix="/api/v1/media", tags=["Media"])
 
 @app.get("/")
 def read_root():
-    return {"message": "OmniOrder API Running"}
+    return {"message": "Stelly API Running"}

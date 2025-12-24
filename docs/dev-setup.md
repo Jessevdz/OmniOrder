@@ -30,7 +30,7 @@ This is the most important line. It ensures that when you visit `pizza.localhost
 
 ### 3. Simulating DNS (The "Wildcard" Domain)
 
-Azure Front Door usually manages a wildcard CNAME (`*.omniorder.com`). Locally, you cannot easily create true wildcard DNS without extra tools (like `dnsmasq`).
+Azure Front Door usually manages a wildcard CNAME (`*.stelly.com`). Locally, you cannot easily create true wildcard DNS without extra tools (like `dnsmasq`).
 
 **The "Best Way" for Devs:**
 Stick to the hosts file method described in your `README.md`. It is robust and requires no extra software.

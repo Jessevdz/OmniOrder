@@ -2,11 +2,11 @@
 
 ## 1. Overview
 
-The **Omni-View Demo** is a specialized architectural mode designed to demonstrate the full capabilities of the OmniOrder platform in a single, frictionless session. 
+The **Omni-View Demo** is a specialized architectural mode designed to demonstrate the full capabilities of the Stelly platform in a single, frictionless session. 
 
 Instead of requiring users to log in as different users (Customer, Manager, Kitchen Staff) across different subdomains, the Demo Mode creates a **Unified Shell** that renders these contexts side-by-side or allows instant toggling between them.
 
-**Access URL:** `http://demo.omniorder.localhost/demo/split`
+**Access URL:** `http://demo.stelly.localhost/demo/split`
 
 ---
 
@@ -42,11 +42,11 @@ A **Reset Button** (Rotate Icon) in the bottom navigation bar restores the envir
 ## 3. How to Use the Demo
 
 ### Prerequisites
-Ensure your local environment is running and `demo.omniorder.localhost` points to `127.0.0.1`.
+Ensure your local environment is running and `demo.stelly.localhost` points to `127.0.0.1`.
 
 ### The Narrative Flow
 
-1. **Enter the Shell:** Navigate to `http://demo.omniorder.localhost/demo/split`.
+1. **Enter the Shell:** Navigate to `http://demo.stelly.localhost/demo/split`.
 2. **The Tour:** A "Glass Modal" overlay will guide you.
     * *Step 1:* Highlights the Storefront (Customer View).
     * *Step 2:* Highlights the KDS (Kitchen View).
@@ -66,7 +66,7 @@ Ensure your local environment is running and `demo.omniorder.localhost` points t
 
 ### Backend Overrides (`TenantMiddleware`)
 Usually, the API resolves the tenant based on the subdomain (e.g., `pizza` -> `tenant_pizzahut`). 
-In Demo Mode, if the host is `demo.omniorder.localhost`, the middleware **forces** the database search path to `tenant_demo`, regardless of other contexts.
+In Demo Mode, if the host is `demo.stelly.localhost`, the middleware **forces** the database search path to `tenant_demo`, regardless of other contexts.
 
 ### Frontend Shell (`DemoLayout`)
 The `DemoLayout` wrapper handles the persistence of the session. It includes the `PersonaSwitcher` component, which uses React Router to swap views (`/demo/store`, `/demo/kitchen`, `/demo/admin`) while keeping the layout state (like the Magic Token) alive.

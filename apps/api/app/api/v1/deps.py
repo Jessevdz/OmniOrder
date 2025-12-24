@@ -106,7 +106,7 @@ async def get_current_user(
     # --- 3. Authorization & Context Switch ---
 
     # Case A: Super Admin Console
-    if host == "admin.omniorder.localhost":
+    if host == "admin.stelly.localhost":
         # Ensure the user has super admin privileges
         # If magic token, we trust the sub claim if it's "demo_admin"
         is_demo_admin = auth_method == "magic" and payload.get("sub") == "demo_admin"
@@ -139,6 +139,6 @@ async def get_current_user(
         "email": payload.get("email"),
         "name": payload.get("name"),
         "schema": current_schema,
-        "is_superuser": host == "admin.omniorder.localhost",
+        "is_superuser": host == "admin.stelly.localhost",
         "auth_method": auth_method,
     }
