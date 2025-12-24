@@ -19,28 +19,28 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({ currentStep, onS
 
     const content = [
         {
-            title: "Welcome to Stelly",
-            text: "This is a live demonstration of a multi-tenant ordering platform. You are about to experience how different personas interact in real-time.",
+            title: "Welkom bij Stelly",
+            text: "Dit is een live demonstratie van ons bestelplatform. In deze tour leggen we snel uit wat je mag verwachten.",
             icon: <MonitorPlay size={48} className="text-blue-500" />,
             action: "Start Tour"
         },
         {
-            title: "The Customer View",
-            text: "On the left is the public storefront. It's fully white-labeled. Notice the 'Mono Luxe' theme—sharp corners, monochrome colors, and serif fonts.",
+            title: "Voor de Klant",
+            text: "Links zie de website van je zaak. Deze is volledig aanpasbaar: Het ontwerp, informatie, de menu, enzovoort. Klanten gebruiken dit om bestellingen te plaatsen.",
             icon: <Store size={48} className="text-green-500" />,
-            action: "Next: The Kitchen"
+            action: "Volgende"
         },
         {
-            title: "The Kitchen Display",
-            text: "On the right is the KDS (Kitchen Display System). It runs on a separate WebSocket channel. When you place an order on the left, it appears here instantly.",
+            title: "Voor de Keuken",
+            text: "Rechts zie je het bestelscherm voor de keuken. Wanneer je links een bestelling plaatst, komt deze hier onmiddellijk binnen. De keuken organiseert en voltooit de bestellingen hier.",
             icon: <ChefHat size={48} className="text-orange-500" />,
-            action: "Let's Try It"
+            action: "Volgende"
         },
         {
-            title: "Your Mission",
-            text: "1. Place an order on the left.\n2. Watch it appear on the right.\n3. Use the 'Paint' icon to hot-swap the brand theme.",
+            title: "Voor jou",
+            text: "1. Maak links een bestelling.\n2. Verwerk die bestelling rechts.\n3. Wissel van design met de \'vibe\' knop",
             icon: <ArrowRight size={48} className="text-purple-500" />,
-            action: "Enter Demo"
+            action: "Naar de Demo"
         }
     ];
 
@@ -73,12 +73,12 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({ currentStep, onS
                         </BrandButton>
                     </div>
 
-                    {currentStep > 0 && (
+                    {currentStep >= 0 && (
                         <button
                             onClick={() => onComplete()}
                             className="text-xs text-gray-400 hover:text-gray-600 underline"
                         >
-                            Skip Tour
+                            Overslaan
                         </button>
                     )}
                 </div>
