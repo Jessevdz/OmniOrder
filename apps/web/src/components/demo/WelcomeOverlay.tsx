@@ -20,25 +20,25 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({ currentStep, onS
     const content = [
         {
             title: "Welkom bij Stelly",
-            text: "Dit is een live demonstratie van ons bestelplatform. In deze tour leggen we snel uit wat je mag verwachten.",
+            text: "Dit is een live demonstratie van ons bestelplatform. We leggen snel uit wat je mag verwachten.",
             icon: <MonitorPlay size={48} className="text-blue-500" />,
             action: "Start Tour"
         },
         {
             title: "Voor de Klant",
-            text: "Links zie de website van je zaak. Deze is volledig aanpasbaar: Het ontwerp, informatie, de menu, enzovoort. Klanten gebruiken dit om bestellingen te plaatsen.",
+            text: "Links zie de website van je zaak. Deze is volledig aanpasbaar: Het ontwerp, de menu, je openingsuren, enzovoort. Klanten gebruiken dit om bestellingen te plaatsen.",
             icon: <Store size={48} className="text-green-500" />,
             action: "Volgende"
         },
         {
             title: "Voor de Keuken",
-            text: "Rechts zie je het bestelscherm voor de keuken. Wanneer je links een bestelling plaatst, komt deze hier onmiddellijk binnen. De keuken organiseert en voltooit de bestellingen hier.",
+            text: "Rechts zie je het bestelscherm voor de keuken. Alle bestellingen van de website komen hier onmiddellijk binnen. De keuken organiseert en voltooit de bestellingen hier.",
             icon: <ChefHat size={48} className="text-orange-500" />,
             action: "Volgende"
         },
         {
-            title: "Voor jou",
-            text: "1. Maak links een bestelling.\n2. Verwerk die bestelling rechts.\n3. Wissel van design met de \'vibe\' knop",
+            title: "Probeer het Zelf",
+            text: "1. Maak links een bestelling.\n2. Verwerk de bestelling rechts.\n3. Wissel van design met de \'Vibe\' knop.\n4. Pas de menu aan via de \'Manager\' knop.",
             icon: <ArrowRight size={48} className="text-purple-500" />,
             action: "Naar de Demo"
         }
