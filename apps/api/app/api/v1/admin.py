@@ -125,6 +125,26 @@ def create_item(
     return item
 
 
+@router.put("/items/reorder")
+def reorder_items(
+    payload: List[MenuItemReorder],
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Batch update item ranks.
+    """
+    updates_map = {item.id: item.rank for item in payload}
+    items = db.query(MenuItem).filter(MenuItem.id.in_(updates_map.keys())).all()
+
+    for item in items:
+        if item.id in updates_map:
+            item.rank = updates_map[item.id]
+
+    db.commit()
+    return {"message": "Items reordered successfully"}
+
+
 @router.put("/items/{item_id}", response_model=MenuItemResponse)
 def update_item(
     request: Request,
