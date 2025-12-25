@@ -1,21 +1,19 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTenantConfig } from '../hooks/useTenantConfig';
-import { LayoutGrid, Utensils, Settings, LogOut, Store, ArrowLeft, Eye } from 'lucide-react';
+import { LayoutGrid, Utensils, Settings, LogOut, Store } from 'lucide-react';
 
 export const TenantLayout = () => {
     const { logout } = useAuth();
     const { config } = useTenantConfig();
-    const navigate = useNavigate();
     const location = useLocation();
 
-    // Determine context
-    const isDemoMode = location.pathname.startsWith('/demo');
-    const basePath = isDemoMode ? '/demo/admin' : '/admin';
+    // Determine context (Always /demo/admin in this cleaned version)
+    const basePath = '/demo/admin';
 
     const handleLogout = () => {
         logout();
-        navigate('/admin/login');
+        // The AuthContext logout function handles the redirection to /demo/split
     };
 
     return (
@@ -31,7 +29,7 @@ export const TenantLayout = () => {
                         </div>
                     </div>
 
-                    <nav className="flex-1 px-3 space-y-1">
+                    <nav className="flex-1 px-3 space-y-1 pt-4">
                         <NavLink
                             to={`${basePath}/dashboard`}
                             className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-md transition-all font-medium ${isActive ? 'bg-gray-100 text-primary' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}
@@ -61,7 +59,7 @@ export const TenantLayout = () => {
                             className="flex items-center gap-3 w-full px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-md transition-colors text-sm"
                         >
                             <LogOut size={18} />
-                            Sign Out
+                            End Session
                         </button>
                     </div>
                 </aside>
@@ -71,7 +69,7 @@ export const TenantLayout = () => {
                     <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 shrink-0">
                         <h2 className="font-semibold text-gray-500">Manager Dashboard</h2>
                         <div className="text-sm text-gray-400">
-                            Domain: <span className="font-mono text-gray-600">{window.location.host}</span>
+                            Context: <span className="font-mono text-gray-600">Demo Mode</span>
                         </div>
                     </header>
                     <main className="flex-1 overflow-y-auto p-8 bg-gray-50">

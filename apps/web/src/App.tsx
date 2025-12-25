@@ -40,14 +40,10 @@ function App() {
             <CartProvider>
                 <BrowserRouter>
                     <Routes>
-                        {/* -----------------------------------------------------
-                            1. ENTRY POINT: LANDING PAGE
-                           ----------------------------------------------------- */}
+                        {/* 1. ENTRY POINT: LANDING PAGE */}
                         <Route path="/" element={<LandingPage />} />
 
-                        {/* -----------------------------------------------------
-                            2. THE DEMO EXPERIENCE (Restricted Scope)
-                           ----------------------------------------------------- */}
+                        {/* 2. THE DEMO EXPERIENCE */}
                         <Route path="/demo" element={<DemoLayout />}>
                             {/* Default to Split View */}
                             <Route index element={<Navigate to="split" replace />} />
@@ -75,32 +71,8 @@ function App() {
                             </Route>
                         </Route>
 
-                        {/* -----------------------------------------------------
-                            3. CATCH ALL - Redirect everything else to Landing
-                           ----------------------------------------------------- */}
+                        {/* 3. CATCH ALL - Redirect everything else to Landing */}
                         <Route path="*" element={<Navigate to="/" replace />} />
-
-                        {/* -----------------------------------------------------
-                            DISABLED ROUTES (Platform/Production)
-                            To re-enable production features, uncomment below.
-                           ----------------------------------------------------- */}
-                        {/* <Route path="/kitchen" element={<KitchenDisplay />} />
-                        <Route path="/admin/login" element={<LoginPage />} />
-                        
-                        <Route path="/platform" element={<PlatformLayout />}>
-                            <Route index element={<Navigate to="dashboard" replace />} />
-                            <Route path="dashboard" element={<PlatformDashboard />} />
-                            <Route path="tenants" element={<TenantsPage />} />
-                        </Route>
-
-                        <Route path="/admin" element={<TenantLayout />}>
-                            <Route index element={<Navigate to="dashboard" replace />} />
-                            <Route path="dashboard" element={<TenantDashboard />} />
-                            <Route path="menu" element={<MenuBuilder />} />
-                            <Route path="settings" element={<TenantSettings />} />
-                        </Route> 
-                        */}
-
                     </Routes>
                 </BrowserRouter>
             </CartProvider>

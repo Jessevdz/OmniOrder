@@ -12,29 +12,21 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = "stelly"
     POSTGRES_PORT: str = "5432"
 
-    # Security - OIDC (Authentik)
-    OIDC_DOMAIN: str = "http://auth.localhost"
-    OIDC_CLIENT_ID: str = "stelly-api"
-    OIDC_AUDIENCE: str = "stelly-api"
-    # Internal Docker URL to reach Authentik
-    JWKS_URL: str = "http://authentik-server:9000/application/o/stelly/jwks/"
-    ALGORITHM: str = "RS256"
-
-    # Super Admins (Emails authorized to provision tenants)
-    SUPER_ADMINS: List[str] = ["jesse_vdz@hotmail.com", "admin@stelly.localhost"]
-
-    # Security - Local (For Demo/Magic Tokens)
+    # Security - Local (Self-Contained Demo)
     SECRET_KEY: str = "538422cb-34b7-48a8-8fcc-8c28b6bc21d3"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
+    ALGORITHM: str = "HS256"
+
+    # Super Admins (Simple email check for demo purposes)
+    SUPER_ADMINS: List[str] = ["admin@stelly.localhost"]
 
     # Demo Mode Configuration
     DEMO_DOMAIN: str = "demo.stelly.localhost"
-    DEMO_ACCESS_CODE: str = "STELLYDEMO"
     DEMO_SCHEMA: str = "tenant_demo"
 
     # Storage (MinIO/S3)
-    S3_ENDPOINT: str = "http://minio:9000"  # Internal Docker URL
-    S3_PUBLIC_ENDPOINT: str = "http://localhost:9000"  # Browser accessible URL
+    S3_ENDPOINT: str = "http://minio:9000"
+    S3_PUBLIC_ENDPOINT: str = "http://localhost:9000"
     S3_ACCESS_KEY: str = "minioadmin"
     S3_SECRET_KEY: str = "minioadmin"
     S3_BUCKET: str = "stelly-assets"
