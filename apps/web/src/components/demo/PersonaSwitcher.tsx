@@ -42,7 +42,7 @@ export const PersonaSwitcher: React.FC<PersonaSwitcherProps> = ({ currentPreset,
     ];
 
     const handleReset = async () => {
-        if (!confirm("Reset Demo?\n\nThis will clear all orders and reset branding.")) return;
+        if (!confirm("Reset Demo?")) return;
         const token = sessionStorage.getItem('demo_token');
         if (token) {
             try {

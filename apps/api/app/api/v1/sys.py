@@ -4,7 +4,11 @@ from fastapi import APIRouter, HTTPException, Depends, Body
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.db.session import get_db, engine
-from app.db.models import Tenant, Lead
+from app.db.models import (
+    Tenant,
+    Lead,
+    Category,
+)  # Added Category for context check if needed
 from app.schemas.provision import TenantCreateRequest, TenantResponse
 from app.api.v1.deps import get_current_user
 from app.core.config import settings
@@ -196,15 +200,22 @@ def reset_demo_data(
     if not schema or not schema.startswith("demo_"):
         raise HTTPException(status_code=403, detail="Cannot reset this environment.")
 
+    # 1. Wipe Data (Orders AND Menu)
     try:
         db.execute(text(f"SET search_path TO {schema}"))
+
+        # Truncate orders
         db.execute(text("TRUNCATE TABLE orders CASCADE"))
+
+        # Truncate categories (CASCADE will wipe items, modifier groups, and options)
+        db.execute(text("TRUNCATE TABLE categories CASCADE"))
+
         db.commit()
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to clear orders: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to clear data: {e}")
 
-    # Reset Branding
+    # 2. Reset Branding (Public Tenant Record)
     try:
         db.execute(text("SET search_path TO public"))
         tenant = db.query(Tenant).filter(Tenant.schema_name == schema).first()
@@ -214,5 +225,24 @@ def reset_demo_data(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to reset theme: {e}")
+
+    # 3. Re-Seed Menu Data
+    try:
+        # Construct the seed payload for this specific schema
+        session_seed = DEMO_TENANT_SEED.copy()
+        session_seed["schema_name"] = schema
+
+        # Call the internal provisioner.
+        # Note: provision_tenant_internal checks if tables exist (they do)
+        # and if data exists (it doesn't, because we just truncated).
+        # We skip public record creation because we already reset the existing record in step 2.
+        provision_tenant_internal(db, session_seed, engine, skip_public_record=True)
+
+    except Exception as e:
+        # Don't rollback the truncates if re-seeding fails, otherwise we are in a weird state
+        print(f"Re-seeding failed: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Data cleared, but re-seeding failed: {e}"
+        )
 
     return {"message": "Environment reset successfully."}
