@@ -60,8 +60,12 @@ class Category(Base):
     name = Column(String, nullable=False)
     rank = Column(Integer, default=0)
 
+    # UPDATED: Added order_by="MenuItem.rank"
     items = relationship(
-        "MenuItem", back_populates="category", cascade="all, delete-orphan"
+        "MenuItem",
+        back_populates="category",
+        cascade="all, delete-orphan",
+        order_by="MenuItem.rank",
     )
 
 
