@@ -14,9 +14,9 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({ categories, activeCate
     const scrollToCategory = (id: string) => {
         const element = document.getElementById(`cat-${id}`);
         if (element) {
-            // Offset for the sticky header height (approx 80px for nav + buffer)
-            const y = element.getBoundingClientRect().top + window.scrollY - 100;
-            window.scrollTo({ top: y, behavior: 'smooth' });
+            // FIX: Use scrollIntoView instead of window.scrollTo
+            // This supports both the main window and nested containers (like SplitView)
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     };
 
