@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, Users, ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import { trackEvent } from '../../utils/analytics';
 
 interface OrderItem {
     id: string;
@@ -68,6 +69,12 @@ export const KitchenTicket: React.FC<KitchenTicketProps> = ({ order, onStatusCha
         if (currentIndex === -1) return;
 
         let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+        const newStatus = STATUS_FLOW[nextIndex];
+        trackEvent('kds_status_update', {
+            status: newStatus,
+            order_id: order.id,
+            ticket_number: order.ticket_number
+        });
 
         // Bounds check
         if (nextIndex < 0) nextIndex = 0;

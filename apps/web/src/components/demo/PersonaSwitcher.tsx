@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChefHat, Store, Settings, SplitSquareVertical, RotateCcw, Palette, Check } from 'lucide-react';
 import { THEME_PRESETS } from '../../utils/theme';
+import { trackEvent } from '../../utils/analytics'; // Import analytics helper
 
 interface PersonaSwitcherProps {
     currentPreset: string;
@@ -43,6 +44,10 @@ export const PersonaSwitcher: React.FC<PersonaSwitcherProps> = ({ currentPreset,
 
     const handleReset = async () => {
         if (!confirm("Reset Demo?")) return;
+
+        // TRACKING: Track reset action
+        trackEvent('demo_reset', { from_path: location.pathname });
+
         const token = sessionStorage.getItem('demo_token');
         if (token) {
             try {
@@ -79,6 +84,12 @@ export const PersonaSwitcher: React.FC<PersonaSwitcherProps> = ({ currentPreset,
                                 <button
                                     key={key}
                                     onClick={() => {
+                                        // TRACKING: Track theme change
+                                        trackEvent('demo_theme_change', {
+                                            preset: key,
+                                            previous_preset: currentPreset
+                                        });
+
                                         onPresetChange(key);
                                         setShowThemes(false);
                                     }}
@@ -107,7 +118,15 @@ export const PersonaSwitcher: React.FC<PersonaSwitcherProps> = ({ currentPreset,
                     return (
                         <button
                             key={tab.id}
-                            onClick={() => navigate(tab.path)}
+                            onClick={() => {
+                                // TRACKING: Track view switching
+                                trackEvent('demo_view_switch', {
+                                    view: tab.id,
+                                    path: tab.path
+                                });
+
+                                navigate(tab.path);
+                            }}
                             className={`
                                 ${displayClass} items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold transition-all
                                 ${isActive
@@ -127,7 +146,13 @@ export const PersonaSwitcher: React.FC<PersonaSwitcherProps> = ({ currentPreset,
 
                 {/* Theme Toggle */}
                 <button
-                    onClick={() => setShowThemes(!showThemes)}
+                    onClick={() => {
+                        // TRACKING: Track opening the theme menu
+                        if (!showThemes) {
+                            trackEvent('demo_theme_menu_open');
+                        }
+                        setShowThemes(!showThemes);
+                    }}
                     className={`
                         flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold transition-all
                         ${showThemes

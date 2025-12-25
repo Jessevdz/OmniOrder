@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowRight, Loader2, Sparkles, User, Mail, Hexagon } from 'lucide-react';
+import { trackEvent, identifyUser } from '../../utils/analytics';
 
 interface DemoLoginProps {
     onLogin: (token: string, user: any) => void;
@@ -28,9 +29,21 @@ export const DemoLogin: React.FC<DemoLoginProps> = ({ onLogin }) => {
             const data = await res.json();
 
             if (res.ok) {
+                // 1. Identify the session with the lead's email/name
+                identifyUser({
+                    email: formData.email,
+                    name: formData.name,
+                    is_demo_user: true
+                });
+
+                // 2. Track the conversion event
+                trackEvent('demo_session_generated', {
+                    schema: data.user.schema // Useful to debug specific tenant issues
+                });
                 // Pass token and user object back up
                 onLogin(data.access_token, data.user);
             } else {
+                trackEvent('demo_login_failed', { error: data.detail });
                 setError(data.detail || 'Kon de omgeving niet aanmaken.');
             }
         } catch (err) {

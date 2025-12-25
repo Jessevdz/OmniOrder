@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { nanoid } from 'nanoid';
+import { trackEvent } from '../utils/analytics';
 
 export interface CartModifier {
     groupId: string;
@@ -73,6 +74,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const addToCart = (newItem: Omit<CartItem, 'qty' | 'cartId'>) => {
+        // Track item addition
+        trackEvent('cart_add_item', {
+            item_id: newItem.id,
+            item_name: newItem.name,
+            price: newItem.price,
+            has_modifiers: newItem.modifiers.length > 0
+        });
+
         setItems(prev => {
             // Check if exact same item configuration exists
             const existingIndex = prev.findIndex(i =>

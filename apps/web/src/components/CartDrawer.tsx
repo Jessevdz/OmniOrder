@@ -3,6 +3,7 @@ import { useCart } from '../context/CartContext';
 import { BrandButton } from './common/BrandButton';
 import { X, ShoppingBag, Trash2, User, Hash } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { trackEvent } from '../utils/analytics';
 
 export function CartDrawer() {
     const {
@@ -63,12 +64,19 @@ export function CartDrawer() {
 
             if (res.ok) {
                 const data = await res.json();
+                // Track successful order
+                trackEvent('order_completed', {
+                    order_id: data.id,
+                    total_amount: cartTotal,
+                    item_count: items.length
+                });
                 setActiveOrderId(data.id);
                 clearCart();
                 setTableNumber('');
                 toggleDrawer(false);
             } else {
                 const err = await res.json();
+                trackEvent('order_failed', { reason: 'api_error' });
                 if (res.status === 429) {
                     alert("Please wait a moment before placing another order.");
                 } else {

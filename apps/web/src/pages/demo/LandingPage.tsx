@@ -19,6 +19,7 @@ import {
     Send,
     User
 } from 'lucide-react';
+import { trackEvent } from '../../utils/analytics';
 
 // --- LEAD CAPTURE COMPONENT ---
 const LeadCaptureForm = () => {
@@ -43,6 +44,7 @@ const LeadCaptureForm = () => {
             });
 
             if (res.ok) {
+                trackEvent('lead_capture_success', { source: 'landing_page' }); // Track Form Submit
                 setStatus('success');
                 setFormData({ name: '', email: '', business: '' });
             } else {
@@ -133,6 +135,7 @@ export const LandingPage = () => {
     const navigate = useNavigate();
 
     const handleStartDemo = () => {
+        trackEvent('demo_start_click', { position: 'hero_cta' });
         navigate('/demo/split');
     };
 
