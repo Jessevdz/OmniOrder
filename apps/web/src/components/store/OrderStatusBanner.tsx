@@ -58,15 +58,15 @@ export const OrderStatusBanner = ({ className = "" }: { className?: string }) =>
     const getStatusConfig = (status: string) => {
         switch (status) {
             case 'PENDING':
-                return { label: 'Order Sent', desc: 'Waiting for kitchen confirmation...', icon: <Loader2 className="animate-spin" />, bg: 'bg-blue-600', progress: 'w-1/12' };
+                return { label: 'Bestelling geplaatst', desc: 'Wachten op bevestiging...', icon: <Loader2 className="animate-spin" />, bg: 'bg-blue-600', progress: 'w-1/12' };
             case 'QUEUED':
-                return { label: 'In Queue', desc: 'Your order is confirmed.', icon: <ListStart />, bg: 'bg-indigo-600', progress: 'w-1/3' };
+                return { label: 'Bestelling bevestigd', desc: 'We starten zo snel mogelijk met je bestelling.', icon: <ListStart />, bg: 'bg-indigo-600', progress: 'w-1/3' };
             case 'PREPARING':
-                return { label: 'Preparing', desc: 'Chef is working on your food.', icon: <ChefHat className="animate-pulse" />, bg: 'bg-orange-500', progress: 'w-2/3' };
+                return { label: 'Bestelling wordt bereid', desc: 'De Chefs zijn druk bezig met je bestelling.', icon: <ChefHat className="animate-pulse" />, bg: 'bg-orange-500', progress: 'w-2/3' };
             case 'READY':
-                return { label: 'Ready for Pickup!', desc: `Please pick up order #${order.ticket_number}`, icon: <CheckCircle2 />, bg: 'bg-green-600', progress: 'w-full' };
+                return { label: 'Bestelling klaar!', desc: `Je kan bestelling #${order.ticket_number} gaan ophalen`, icon: <CheckCircle2 />, bg: 'bg-green-600', progress: 'w-full' };
             case 'COMPLETED':
-                return { label: 'Completed', desc: 'Thank you for dining with us!', icon: <CheckCircle2 />, bg: 'bg-gray-600', progress: 'w-full' };
+                return { label: 'Afgerond', desc: 'Bedankt om bij ons te bestellen!', icon: <CheckCircle2 />, bg: 'bg-gray-600', progress: 'w-full' };
             default:
                 return { label: 'Processing', desc: 'Update pending...', icon: <Loader2 />, bg: 'bg-gray-600', progress: 'w-full' };
         }

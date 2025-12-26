@@ -166,7 +166,7 @@ export function CartDrawer() {
 
                 {items.length > 0 && (
                     <div className="p-4 bg-gray-50 border-t space-y-3">
-                        <h3 className="font-bold text-gray-700 text-sm uppercase tracking-wide">Guest Details</h3>
+                        <h3 className="font-bold text-gray-700 text-sm uppercase tracking-wide">Jouw Details</h3>
 
                         <div className="relative">
                             <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -204,7 +204,7 @@ export function CartDrawer() {
                             onClick={handleCheckout}
                             disabled={isSubmitting}
                         >
-                            {isSubmitting ? 'Sending Order...' : 'Confirm Order'}
+                            {isSubmitting ? 'Versturen...' : 'Bestel'}
                         </BrandButton>
                     </div>
                 )}
