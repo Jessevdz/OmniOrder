@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 
 interface Category {
     id: string;
@@ -12,6 +12,23 @@ interface CategoryNavProps {
 }
 
 export const CategoryNav: React.FC<CategoryNavProps> = ({ categories, activeCategory, onCategorySelect }) => {
+    // 1. Create a ref to store references to specific category buttons
+    const itemsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
+
+    // 2. Effect: Scroll the active button into view whenever activeCategory changes
+    useEffect(() => {
+        if (activeCategory) {
+            const node = itemsRef.current.get(activeCategory);
+            if (node) {
+                node.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                    inline: 'center' // This centers the active button horizontally
+                });
+            }
+        }
+    }, [activeCategory]);
+
     const scrollToCategory = (id: string) => {
         // 1. Trigger parent callback (to pause scroll spy)
         if (onCategorySelect) {
@@ -33,6 +50,11 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({ categories, activeCate
                 {categories.map((cat) => (
                     <button
                         key={cat.id}
+                        // 3. Store the DOM element in our ref map
+                        ref={(el) => {
+                            if (el) itemsRef.current.set(cat.id, el);
+                            else itemsRef.current.delete(cat.id);
+                        }}
                         onClick={() => scrollToCategory(cat.id)}
                         className={`
               px-5 py-2 rounded-full text-sm font-bold tracking-wide transition-all duration-200 active:scale-95 border

@@ -31,7 +31,7 @@ export function MenuBuilder() {
     const [activeTab, setActiveTab] = useState<'items' | 'categories'>('items');
     const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
 
-    // Mobile View State (New)
+    // Mobile View State
     const [mobileView, setMobileView] = useState<'editor' | 'preview'>('editor');
 
     // Item Form
@@ -98,7 +98,7 @@ export function MenuBuilder() {
         return res.json();
     };
 
-    // --- HANDLERS (Same as before) ---
+    // --- HANDLERS ---
     const handleCategorySubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
@@ -128,10 +128,52 @@ export function MenuBuilder() {
         await apiCall('/categories/reorder', 'PUT', reordered.map(c => ({ id: c.id, rank: c.rank })));
     };
 
+    // --- FIXED: Item Reordering Logic ---
+    const handleReorderItem = async (item: MenuItem, direction: 'up' | 'down') => {
+        // 1. Get all items in this specific category, sorted by their current rank
+        const catItems = items
+            .filter(i => i.category_id === item.category_id)
+            .sort((a, b) => (a.rank || 0) - (b.rank || 0));
+
+        // 2. Find indices
+        const index = catItems.findIndex(i => i.id === item.id);
+        if (index === -1) return;
+
+        const swapIndex = direction === 'up' ? index - 1 : index + 1;
+        if (swapIndex < 0 || swapIndex >= catItems.length) return;
+
+        // 3. Swap the objects in the temporary array
+        const newOrderList = [...catItems];
+        [newOrderList[index], newOrderList[swapIndex]] = [newOrderList[swapIndex], newOrderList[index]];
+
+        // 4. Re-calculate rank based on new array position (Normalization)
+        const updates = newOrderList.map((itm, idx) => ({
+            id: itm.id!,
+            rank: idx // Force distinct ranks 0, 1, 2...
+        }));
+
+        // 5. Optimistic UI Update
+        const rankMap = new Map(updates.map(u => [u.id, u.rank]));
+        const newItemsState = items.map(i => {
+            if (rankMap.has(i.id!)) {
+                return { ...i, rank: rankMap.get(i.id!) };
+            }
+            return i;
+        });
+        setItems(newItemsState);
+
+        // 6. API Call
+        try {
+            await apiCall('/items/reorder', 'PUT', updates);
+        } catch (e) {
+            console.error("Reorder failed", e);
+            fetchData(); // Revert on error
+        }
+    };
+
     const resetItemForm = () => {
         setItemForm({ name: '', description: '', price: 0, image_url: '', category_id: '', is_available: true });
         setFormMode('create');
-        // Switch back to editor on mobile when clicking edit/new
         setMobileView('editor');
     };
 
@@ -146,10 +188,18 @@ export function MenuBuilder() {
     const handleItemSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            if (formMode === 'create') await apiCall('/items', 'POST', itemForm);
+            // If new item, assign last rank
+            let payload = { ...itemForm };
+            if (formMode === 'create' && itemForm.category_id) {
+                const catItems = items.filter(i => i.category_id === itemForm.category_id);
+                const maxRank = catItems.length > 0 ? Math.max(...catItems.map(i => i.rank || 0)) : -1;
+                payload.rank = maxRank + 1;
+            }
+
+            if (formMode === 'create') await apiCall('/items', 'POST', payload);
             else {
                 if (!itemForm.id) return;
-                await apiCall(`/items/${itemForm.id}`, 'PUT', itemForm);
+                await apiCall(`/items/${itemForm.id}`, 'PUT', payload);
             }
             resetItemForm();
             fetchData();
@@ -345,9 +395,9 @@ export function MenuBuilder() {
 
                             <div className="space-y-2">
                                 {categories.sort((a, b) => a.rank - b.rank).map((c, idx) => (
-                                    <div key={c.id} className="bg-white border border-gray-200 p-3 rounded-lg flex justify-between items-center shadow-sm">
-                                        <span className="font-semibold text-gray-800">{c.name}</span>
-                                        <div className="flex items-center gap-1">
+                                    <div key={c.id} className="bg-white border border-gray-200 p-3 rounded-lg flex justify-between items-center shadow-sm gap-3">
+                                        <span className="font-semibold text-gray-800 truncate min-w-0 flex-1">{c.name}</span>
+                                        <div className="flex items-center gap-1 shrink-0">
                                             <button onClick={() => handleReorderCategory(idx, 'up')} className="p-1 hover:bg-gray-100 rounded"><ArrowUp size={16} /></button>
                                             <button onClick={() => handleReorderCategory(idx, 'down')} className="p-1 hover:bg-gray-100 rounded"><ArrowDown size={16} /></button>
                                             <button onClick={() => handleDeleteCategory(c.id)} className="p-1 text-red-500 hover:bg-red-50 rounded"><Trash2 size={16} /></button>
@@ -394,9 +444,30 @@ export function MenuBuilder() {
                                                         <span className="font-mono text-sm font-semibold text-gray-600">€ {(item.price / 100).toFixed(2)}</span>
                                                     </div>
                                                     <p className="text-sm text-gray-500 line-clamp-1 mt-0.5">{item.description}</p>
-                                                    <div className="flex gap-2 mt-3">
-                                                        <button onClick={() => handleEditItemClick(item)} className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded flex items-center gap-1"><Pencil size={12} /> Edit</button>
-                                                        <button onClick={() => handleDeleteItem(item.id!)} className="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded flex items-center gap-1"><Trash2 size={12} /> Delete</button>
+
+                                                    {/* Item Actions */}
+                                                    <div className="flex gap-2 mt-3 flex-wrap">
+                                                        {/* Reorder Controls */}
+                                                        <div className="flex items-center bg-gray-100 rounded-lg p-0.5 mr-2">
+                                                            <button
+                                                                onClick={() => handleReorderItem(item, 'up')}
+                                                                className="p-1.5 hover:bg-white rounded-md text-gray-600 transition-colors"
+                                                                title="Move Up"
+                                                            >
+                                                                <ArrowUp size={14} />
+                                                            </button>
+                                                            <div className="w-px h-3 bg-gray-300 mx-0.5" />
+                                                            <button
+                                                                onClick={() => handleReorderItem(item, 'down')}
+                                                                className="p-1.5 hover:bg-white rounded-md text-gray-600 transition-colors"
+                                                                title="Move Down"
+                                                            >
+                                                                <ArrowDown size={14} />
+                                                            </button>
+                                                        </div>
+
+                                                        <button onClick={() => handleEditItemClick(item)} className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded flex items-center gap-1 hover:bg-blue-100 transition-colors"><Pencil size={12} /> Edit</button>
+                                                        <button onClick={() => handleDeleteItem(item.id!)} className="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded flex items-center gap-1 hover:bg-red-100 transition-colors"><Trash2 size={12} /> Delete</button>
                                                     </div>
                                                 </div>
                                             </div>
