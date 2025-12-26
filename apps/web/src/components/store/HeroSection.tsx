@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapPin, Clock, Phone, Info, X, Calendar, ArrowRight } from 'lucide-react';
+import { MapPin, Clock, Phone, Info, X, ArrowRight } from 'lucide-react';
 import { BrandButton } from '../common/BrandButton';
 
 // --- Types ---
@@ -102,18 +102,6 @@ export const HeroSection: React.FC<HeroProps> = ({
         'stelly': 'split', // Using split, but style tweaks below handle the transparency
         'tech-ocean': 'banner'
     }[preset] || 'centered';
-
-    const StatusBadge = () => (
-        <div className="inline-flex items-center gap-2 mb-4 bg-surface/90 backdrop-blur-[var(--glass-blur)] px-4 py-1.5 rounded-[var(--radius-lg)] border border-border shadow-sm">
-            <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
-            </span>
-            <span className="text-xs font-bold uppercase tracking-widest text-text-main font-heading">
-                Open for Dining
-            </span>
-        </div>
-    );
 
     return (
         <>

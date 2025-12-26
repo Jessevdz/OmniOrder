@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Check, Palette, Save, Type, MapPin, Trash2, Plus } from 'lucide-react';
+import { Check, Palette, Save, MapPin, Trash2, Plus } from 'lucide-react';
 import { THEME_PRESETS } from '../../utils/theme';
 
 interface OperatingHour {

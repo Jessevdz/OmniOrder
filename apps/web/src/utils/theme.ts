@@ -117,7 +117,8 @@ export const applyTheme = (preset: string, config: TenantThemeConfig) => {
     // 1. Load Preset (fallback to Mono Luxe)
     const base = THEME_PRESETS[preset] || THEME_PRESETS['mono-luxe'];
 
-    const themeStyles: React.CSSProperties = {
+    // Create a copy. We cast to 'any' here to allow CSS variable injection below.
+    const themeStyles: any = {
         ...base,
     };
 
@@ -131,5 +132,5 @@ export const applyTheme = (preset: string, config: TenantThemeConfig) => {
         themeStyles['--font-body'] = config.font_family;
     }
 
-    return themeStyles;
+    return themeStyles as React.CSSProperties;
 };

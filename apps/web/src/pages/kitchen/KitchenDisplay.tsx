@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useTenantConfig } from '../../hooks/useTenantConfig';
-import { useAuth } from '../../context/AuthContext'; // <--- Import Auth Hook
-import { Wifi, WifiOff, ChefHat, Bell, Loader2 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { Wifi, WifiOff, ChefHat, Loader2 } from 'lucide-react';
 import { KitchenTicket } from '../../components/kds/KitchenTicket';
 
 // --- Types ---

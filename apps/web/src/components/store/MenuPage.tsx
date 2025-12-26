@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext";
@@ -6,7 +6,6 @@ import { HeroSection } from "../../components/store/HeroSection";
 import { CategoryNav } from "../../components/store/CategoryNav";
 import { MenuGridItem } from "../../components/store/MenuGridItem";
 import { ItemDetailModal } from "../../components/store/ItemDetailModal";
-import { Loader2 } from "lucide-react";
 
 // Types
 interface MenuItem {
@@ -41,14 +40,13 @@ export function MenuPage({ config: propConfig }: MenuPageProps) {
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState<string>('');
-    const { addToCart, toggleDrawer } = useCart();
+    const { addToCart } = useCart();
 
     // Modal State
     const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     const presetName = config.preset || 'mono-luxe';
-    const observerRef = useRef<IntersectionObserver | null>(null);
 
     // 3. Data Fetching
     useEffect(() => {
@@ -81,38 +79,10 @@ export function MenuPage({ config: propConfig }: MenuPageProps) {
         setIsModalOpen(true);
     };
 
-    const handleConfirmAdd = (item: any, qty: number, notes: string) => {
+    const handleConfirmAdd = (item: any, qty: number) => {
         for (let i = 0; i < qty; i++) {
             addToCart(item);
         }
-    };
-
-    // QUICK BUNDLE LOGIC ---
-    const handleQuickDemoOrder = () => {
-        if (categories.length === 0) return;
-
-        const allItems = categories.flatMap(c => c.items);
-        const findItem = (keywords: string[]) =>
-            allItems.find(i => keywords.some(k => i.name.toLowerCase().includes(k)));
-
-        const burgerOrMain = findItem(['burger', 'pizza', 'whopper', 'steak']) || allItems[0];
-        const fryOrSide = findItem(['fry', 'fries', 'salad', 'wings']) || allItems[1] || allItems[0];
-        const drink = findItem(['shake', 'coke', 'soda', 'water']) || allItems[2] || allItems[0];
-
-        const bundle = new Set([burgerOrMain, fryOrSide, drink]);
-
-        bundle.forEach(item => {
-            if (item) addToCart({
-                id: item.id,
-                name: item.name,
-                price: item.price,
-                image_url: item.image_url,
-                modifiers: [],
-                notes: 'Demo Quick Add'
-            });
-        });
-
-        toggleDrawer(true);
     };
 
     // 5. Loading State

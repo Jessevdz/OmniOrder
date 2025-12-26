@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTenantConfig } from '../hooks/useTenantConfig';
 import { LayoutGrid, Utensils, Settings, LogOut, Store } from 'lucide-react';
@@ -6,7 +6,6 @@ import { LayoutGrid, Utensils, Settings, LogOut, Store } from 'lucide-react';
 export const TenantLayout = () => {
     const { logout } = useAuth();
     const { config } = useTenantConfig();
-    const location = useLocation();
 
     // Determine context (Always /demo/admin in this cleaned version)
     const basePath = '/demo/admin';

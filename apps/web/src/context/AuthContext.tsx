@@ -41,6 +41,10 @@ export const useAuth = () => {
 
     if (isDemoContext && demoToken) {
         return {
+            // FIX: Spread `auth` FIRST so it provides base properties/methods,
+            // but allows our manual Demo overrides (isAuthenticated: true) to win.
+            ...auth,
+
             token: demoToken,
             isAuthenticated: true,
             isLoading: false,
@@ -51,21 +55,31 @@ export const useAuth = () => {
                     email: demoUser?.email || "demo@stelly.localhost",
                     sub: "demo_admin",
                     // Also expose schema for debugging if needed
+                    // @ts-ignore
                     schema: demoUser?.schema
                 },
-                access_token: demoToken
-            },
+                access_token: demoToken,
+                // Add required properties to satisfy TS if necessary, or let implicit typing handle it
+                toStorageString: () => "",
+                expires_in: 3600,
+                scope: "openid profile email",
+                token_type: "Bearer"
+            } as any, // Cast to any to avoid strict User type mismatch for the mock object
+
             login: () => { }, // No-op
             logout: () => {
                 sessionStorage.removeItem('demo_token');
                 sessionStorage.removeItem('demo_user'); // Clean up user too
                 window.location.href = '/demo/split';
             },
-            ...auth // fallback properties
         };
     }
 
     return {
+        // FIX: Spread `auth` FIRST to prevent TS2783 (duplication error)
+        // and ensure our normalized properties below take precedence if they differ.
+        ...auth,
+
         // Map OIDC 'access_token' to the generic 'token' used by fetch calls
         token: auth.user?.access_token || null,
 
@@ -77,8 +91,5 @@ export const useAuth = () => {
         // Map generic actions to OIDC methods
         login: () => auth.signinRedirect(),
         logout: () => auth.signoutRedirect(),
-
-        // Expose raw auth object for advanced usage
-        ...auth
     };
 };
